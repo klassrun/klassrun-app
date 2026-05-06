@@ -1,8 +1,32 @@
 import './globals.css'
+import { Fraunces, Geist } from 'next/font/google'
 import LoadingSplash from '@/components/LoadingSplash'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 
 const BASE_URL = 'https://app.klassrun.com'
+
+// ── Fonts ─────────────────────────────────────────────────────────────
+//
+// Fraunces — characterful serif for display/headings. Adds weight and
+// editorial gravitas. Variable font, all weights/optical-sizes available.
+//
+// Geist — clean modern sans for body. Designed for screens, generous
+// x-height, neutral but not boring.
+//
+// Both are exposed as CSS variables via next/font, then mapped in globals.css.
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  axes: ['SOFT', 'WONK', 'opsz'],
+})
+
+const geist = Geist({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+})
 
 export const viewport = {
   width: 'device-width',
@@ -14,18 +38,20 @@ export const viewport = {
 
 export const metadata = {
   title: {
-    default: 'KlassRun — AI Lesson Notes & School Management',
-    template: '%s | KlassRun',
+    default: 'Klassrun — The School Operating System for Nigerian Schools',
+    template: '%s · Klassrun',
   },
   description:
-    'Generate curriculum-aligned lesson notes, WAEC/NECO exam questions, and manage your school — all in one platform.',
+    'Run your school\'s academics from one place. AI-powered lesson notes, schemes of work, and WAEC/NECO-style exam preparation — built for the Nigerian curriculum.',
   keywords: [
-    'lesson note generator',
-    'WAEC exam questions',
+    'school operating system',
     'school management Nigeria',
     'AI lesson notes',
+    'WAEC exam questions',
+    'NECO exam preparation',
     'NERDC curriculum',
-    'KlassRun',
+    'school SaaS Nigeria',
+    'Klassrun',
   ],
   authors: [{ name: 'Klassrun Technologies Ltd' }],
 
@@ -33,16 +59,16 @@ export const metadata = {
     type: 'website',
     locale: 'en_NG',
     url: BASE_URL,
-    siteName: 'KlassRun',
-    title: 'KlassRun — AI Lesson Notes & School Management',
+    siteName: 'Klassrun',
+    title: 'Klassrun — The School Operating System for Nigerian Schools',
     description:
-      'Generate curriculum-aligned lesson notes, WAEC/NECO exam questions, and manage your school.',
+      'Run your school\'s academics from one place. AI-powered lesson notes, schemes of work, and WAEC/NECO-style exam preparation.',
     images: [
       {
         url: `${BASE_URL}/images/og-image.webp`,
         width: 1200,
         height: 630,
-        alt: 'KlassRun Platform',
+        alt: 'Klassrun — School Operating System',
         type: 'image/webp',
       },
     ],
@@ -50,8 +76,8 @@ export const metadata = {
 
   twitter: {
     card: 'summary_large_image',
-    title: 'KlassRun',
-    description: 'AI-powered lesson notes and school management for Nigerian schools.',
+    title: 'Klassrun',
+    description: 'The AI-powered school operating system for Nigerian schools.',
     images: [`${BASE_URL}/images/og-image.webp`],
   },
 
@@ -65,20 +91,14 @@ export const metadata = {
     ],
   },
 
-  alternates: {
-    canonical: BASE_URL,
-  },
-
-  robots: {
-    index: true,
-    follow: true,
-  },
+  alternates: { canonical: BASE_URL },
+  robots:     { index: true, follow: true },
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={`${fraunces.variable} ${geist.variable}`}>
+      <body className="antialiased">
         <LoadingSplash />
         <ServiceWorkerRegister />
         {children}

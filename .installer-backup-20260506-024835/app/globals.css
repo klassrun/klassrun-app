@@ -58,17 +58,17 @@
     --color-klassrun-green-light: oklch(0.75 0.15 145);
     --color-klassrun-navy:        oklch(0.22 0.025 255);
     --color-klassrun-navy-light:  oklch(0.30 0.02 255);
-    --color-klassrun-cream:       oklch(0.985 0.006 90);    /* softer off-white */
-    --color-klassrun-cream-deep:  oklch(0.96 0.012 85);     /* slightly darker */
+    --color-klassrun-cream:       oklch(0.97 0.018 90);     /* warm canvas */
+    --color-klassrun-cream-deep:  oklch(0.94 0.025 85);     /* slightly darker */
     --color-klassrun-ink:         oklch(0.18 0.02 255);     /* darker than navy for body text */
 }
 
 :root {
     /* ── Klassrun branded theme ── */
-    --background: oklch(0.985 0.006 90);                 /* SOFT off-white (warm but light) */
+    --background: oklch(0.97 0.018 90);                  /* WARM CREAM (not stark white) */
     --foreground: oklch(0.18 0.02 255);                  /* near-black ink */
 
-    --card: oklch(1 0 0);                                /* pure white on cream creates lift */
+    --card: oklch(1 0 0);                                /* white on cream creates lift */
     --card-foreground: oklch(0.18 0.02 255);
 
     --popover: oklch(1 0 0);
@@ -77,19 +77,19 @@
     --primary: oklch(0.65 0.178 145);                    /* Klassrun green */
     --primary-foreground: oklch(1 0 0);
 
-    --secondary: oklch(0.96 0.012 85);                   /* deeper cream */
+    --secondary: oklch(0.94 0.025 85);                   /* deeper cream */
     --secondary-foreground: oklch(0.22 0.025 255);
 
-    --muted: oklch(0.96 0.011 85);                       /* warm muted */
+    --muted: oklch(0.94 0.022 85);                       /* warm muted */
     --muted-foreground: oklch(0.42 0.018 255);
 
-    --accent: oklch(0.94 0.04 145);                      /* sage tint */
+    --accent: oklch(0.93 0.05 145);                      /* sage tint */
     --accent-foreground: oklch(0.22 0.025 255);
 
     --destructive: oklch(0.55 0.22 25);
 
-    --border: oklch(0.91 0.008 85);                      /* warm border */
-    --input: oklch(0.91 0.008 85);
+    --border: oklch(0.88 0.012 85);                      /* warm border */
+    --input: oklch(0.88 0.012 85);
     --ring: oklch(0.65 0.178 145);
 
     --chart-1: oklch(0.65 0.178 145);
@@ -100,13 +100,13 @@
 
     --radius: 0.75rem;
 
-    --sidebar: oklch(0.97 0.011 85);
+    --sidebar: oklch(0.96 0.022 85);
     --sidebar-foreground: oklch(0.22 0.025 255);
     --sidebar-primary: oklch(0.65 0.178 145);
     --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.94 0.04 145);
+    --sidebar-accent: oklch(0.93 0.05 145);
     --sidebar-accent-foreground: oklch(0.22 0.025 255);
-    --sidebar-border: oklch(0.91 0.008 85);
+    --sidebar-border: oklch(0.88 0.012 85);
     --sidebar-ring: oklch(0.65 0.178 145);
 }
 
@@ -174,8 +174,8 @@
     .bg-paper {
         background-color: var(--background);
         background-image:
-            radial-gradient(circle at 20% 10%, oklch(0.65 0.178 145 / 0.02) 0%, transparent 40%),
-            radial-gradient(circle at 80% 90%, oklch(0.22 0.025 255 / 0.02) 0%, transparent 40%);
+            radial-gradient(circle at 20% 10%, oklch(0.65 0.178 145 / 0.03) 0%, transparent 40%),
+            radial-gradient(circle at 80% 90%, oklch(0.22 0.025 255 / 0.03) 0%, transparent 40%);
     }
 
     /* Editorial number marker (01, 02, etc.) */
