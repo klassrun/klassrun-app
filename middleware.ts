@@ -5,7 +5,7 @@
 // already-authenticated users away from /login + /signup.
 
 import { NextResponse, type NextRequest } from 'next/server'
-import { AUTH_COOKIE_NAME } from '@/lib/auth-cookie'
+import { AUTH_COOKIE_NAME, ROLE_COOKIE_NAME } from '@/lib/auth-cookie'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/admin']
 const AUTH_PAGES         = ['/login', '/signup']
@@ -20,6 +20,35 @@ export function middleware(request: NextRequest) {
     url.pathname = '/login'
     url.searchParams.set('next', pathname)
     return NextResponse.redirect(url)
+  }
+
+  // ── batch-2-phase-1-role-redirects ──
+  // At this point, if the user has no token they've already been redirected.
+  // So the role-cookie check below only runs for authenticated users.
+  // The role cookie is NOT a security boundary — the API does real checks.
+  // It exists purely for fast edge-time UI routing.
+  if (hasToken) {
+    const role = request.cookies.get(ROLE_COOKIE_NAME)?.value
+
+    // /admin/* is SUPER_ADMIN only
+    if (pathname.startsWith('/admin') && role !== 'SUPER_ADMIN') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
+    // /dashboard/teachers and /dashboard/settings are SCHOOL_ADMIN only
+    if (
+      (pathname.startsWith('/dashboard/teachers') ||
+       pathname.startsWith('/dashboard/settings')) &&
+      role !== 'SCHOOL_ADMIN'
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
   }
 
   // Logged-in user visiting /login or /signup → /dashboard

@@ -8,10 +8,11 @@
 // at GET / after submission.
 
 import { NextResponse } from 'next/server'
-import { clearAuthCookie } from '@/lib/auth-cookie'
+import { clearAuthCookie, clearRoleCookie } from '@/lib/auth-cookie'
 
 export async function POST(request: Request) {
   await clearAuthCookie()
+  await clearRoleCookie()
   // Build absolute URL for the redirect (Next.js requires this in route handlers)
   const url = new URL('/', request.url)
   return NextResponse.redirect(url, 303)

@@ -43,3 +43,36 @@ export async function clearAuthCookie() {
 }
 
 export const AUTH_COOKIE_NAME = COOKIE_NAME
+
+
+// ── Batch 2 Phase 1 — role cookie ──────────────────────────────────────────
+// Non-httpOnly cookie used ONLY for client-side / middleware UI routing.
+// The API still does real role checks on every request — this cookie is not
+// security. If a user tampers with it, they'd see UI shells but no data.
+export const ROLE_COOKIE_NAME = 'klassrun_role'
+
+const ROLE_COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 days
+
+export async function setRoleCookie(role: string) {
+  const { cookies } = await import('next/headers')
+  const store = await cookies()
+  store.set(ROLE_COOKIE_NAME, role, {
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: ROLE_COOKIE_MAX_AGE,
+  })
+}
+
+export async function getRoleCookie(): Promise<string | undefined> {
+  const { cookies } = await import('next/headers')
+  const store = await cookies()
+  return store.get(ROLE_COOKIE_NAME)?.value
+}
+
+export async function clearRoleCookie() {
+  const { cookies } = await import('next/headers')
+  const store = await cookies()
+  store.delete(ROLE_COOKIE_NAME)
+}

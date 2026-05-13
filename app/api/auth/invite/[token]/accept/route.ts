@@ -8,7 +8,7 @@
 
 import { NextResponse } from 'next/server'
 import { apiFetch } from '@/lib/api'
-import { setAuthCookie } from '@/lib/auth-cookie'
+import { setAuthCookie, setRoleCookie } from '@/lib/auth-cookie'
 
 export async function POST(
   request: Request,
@@ -26,7 +26,7 @@ export async function POST(
 
   const result = await apiFetch<{
     token: string
-    user: unknown
+    user: { id: string; email: string; role: string; schoolId: string | null }
   }>(`/api/auth/invite/${encodeURIComponent(inviteToken)}/accept`, {
     method: 'POST',
     body,
@@ -42,6 +42,9 @@ export async function POST(
   // Set the JWT in an httpOnly cookie so the teacher is now logged in
   if (result.data?.token) {
     await setAuthCookie(result.data.token)
+    if (result.data.user?.role) {
+      await setRoleCookie(result.data.user.role)
+    }
   }
 
   return NextResponse.json(
