@@ -14,21 +14,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PasswordInput } from '@/components/ui/password-input'
+import { STATES } from '@/lib/states'
 
 type SlugStatus =
   | { kind: 'idle' }
   | { kind: 'checking' }
   | { kind: 'available' }
   | { kind: 'unavailable'; error: string }
-
-const NIGERIAN_STATES = [
-  'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra', 'Bauchi', 'Bayelsa',
-  'Benue', 'Borno', 'Cross River', 'Delta', 'Ebonyi', 'Edo',
-  'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo', 'Jigawa',
-  'Kaduna', 'Kano', 'Katsina', 'Kebbi', 'Kogi', 'Kwara',
-  'Lagos', 'Nasarawa', 'Niger', 'Ogun', 'Ondo', 'Osun',
-  'Oyo', 'Plateau', 'Rivers', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara',
-]
 
 export default function SignupPage() {
   const [firstName, setFirstName]   = useState('')
@@ -249,7 +241,7 @@ export default function SignupPage() {
                     onChange={(e) => setSchoolState(e.target.value)}
                     className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
                   >
-                    {NIGERIAN_STATES.map((s) => (
+                    {STATES.map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>

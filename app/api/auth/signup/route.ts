@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server'
 import { apiFetch } from '@/lib/api'
-import { setAuthCookie } from '@/lib/auth-cookie'
+import { setAuthCookie, setRoleCookie } from '@/lib/auth-cookie'
 
 type SignupResponse = {
   message: string
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
   }
 
   await setAuthCookie(result.data.token)
+  await setRoleCookie(result.data.user.role)
 
   // Strip the token from the response — it's now in the httpOnly cookie
   const { token: _token, ...rest } = result.data

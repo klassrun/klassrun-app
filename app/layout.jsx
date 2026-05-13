@@ -2,6 +2,7 @@ import './globals.css'
 import { Fraunces, Geist } from 'next/font/google'
 import LoadingSplash from '@/components/LoadingSplash'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+import { Toaster } from 'sonner'
 
 const BASE_URL = 'https://app.klassrun.com'
 
@@ -102,6 +103,7 @@ export default function RootLayout({ children }) {
         <LoadingSplash />
         <ServiceWorkerRegister />
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )
