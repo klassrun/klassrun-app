@@ -61,6 +61,19 @@ export function TeacherDashboard({ me }: { me: Me }) {
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-12 px-6 py-12 sm:px-8 lg:grid-cols-[260px_1fr] lg:py-16">
         <aside className="lg:sticky lg:top-12 lg:self-start">
+          {/* batch-2b-logo-display */}
+          {me.school?.logoUrl && (
+            <img
+              src={me.school.logoUrl.replace(
+                '/upload/',
+                '/upload/w_80,h_80,c_fill,q_auto,f_auto/',
+              )}
+              alt={`${schoolName} logo`}
+              width={40}
+              height={40}
+              className="mb-3 h-10 w-10 rounded-lg object-cover"
+            />
+          )}
           <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
             School
           </p>

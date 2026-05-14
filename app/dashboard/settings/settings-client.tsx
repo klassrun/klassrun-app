@@ -7,7 +7,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { toast } from 'sonner'
 import { STATES } from '@/lib/states'
 
@@ -75,6 +75,26 @@ export function SettingsClient({ school }: { school: School }) {
     }
   }
 
+  // batch-2b-logo-upload
+  async function saveLogo(logoUrl: string | null) {
+    try {
+      const res = await fetch('/api/schools/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logoUrl }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error?.message ?? 'Could not save logo')
+        return
+      }
+      toast.success(logoUrl ? 'Logo saved' : 'Logo removed')
+      router.refresh()
+    } catch {
+      toast.error('Network error. Please try again.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-paper text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur-sm">
@@ -102,6 +122,15 @@ export function SettingsClient({ school }: { school: School }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">
+          {/* batch-2b-logo-upload */}
+          <Section title="Logo">
+            <LogoUpload
+              currentLogoUrl={school.logoUrl}
+              onUploaded={(url) => saveLogo(url)}
+              onRemoved={() => saveLogo(null)}
+            />
+          </Section>
+
           <Section title="Basics">
             <Field label="School name" required>
               <input
@@ -260,6 +289,147 @@ function ReadOnlyRow({
       <span className={[mono ? 'font-mono' : 'font-medium', 'text-right'].join(' ')}>
         {value}
       </span>
+    </div>
+  )
+}
+
+// batch-2b-logo-upload
+function LogoUpload({
+  currentLogoUrl,
+  onUploaded,
+  onRemoved,
+}: {
+  currentLogoUrl: string | null
+  onUploaded: (url: string) => void
+  onRemoved: () => void
+}) {
+  type Phase = 'idle' | 'validating' | 'signing' | 'uploading' | 'saving'
+  const [phase, setPhase] = useState<Phase>('idle')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const MAX_BYTES = 2 * 1024 * 1024
+  const busy = phase !== 'idle'
+  const busyLabel: Record<Phase, string> = {
+    idle: '',
+    validating: 'Checking file…',
+    signing: 'Preparing upload…',
+    uploading: 'Uploading…',
+    saving: 'Saving…',
+  }
+
+  function openPicker() {
+    fileInputRef.current?.click()
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+
+    setPhase('validating')
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please choose an image file')
+      setPhase('idle')
+      return
+    }
+    if (file.size > MAX_BYTES) {
+      toast.error('Image must be 2MB or less')
+      setPhase('idle')
+      return
+    }
+
+    try {
+      setPhase('signing')
+      const sigRes = await fetch('/api/schools/me/logo-upload-signature', { method: 'POST' })
+      if (!sigRes.ok) {
+        const data = await sigRes.json().catch(() => ({}))
+        throw new Error(data?.error?.message ?? 'Could not prepare upload')
+      }
+      const sig = await sigRes.json()
+
+      setPhase('uploading')
+      const form = new FormData()
+      form.append('file', file)
+      form.append('api_key', sig.apiKey)
+      form.append('timestamp', String(sig.timestamp))
+      form.append('signature', sig.signature)
+      form.append('upload_preset', sig.preset)
+      form.append('folder', sig.folder)
+      form.append('public_id', sig.publicId)
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`,
+        { method: 'POST', body: form },
+      )
+      if (!uploadRes.ok) throw new Error('Upload failed. Please try again.')
+      const uploadData = await uploadRes.json()
+      const secureUrl: string = uploadData.secure_url
+      if (!secureUrl) throw new Error('Upload failed. Please try again.')
+
+      setPhase('saving')
+      onUploaded(secureUrl)
+      setPhase('idle')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed')
+      setPhase('idle')
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFile}
+      />
+
+      {currentLogoUrl ? (
+        <div className="flex items-center gap-4">
+          <img
+            src={currentLogoUrl.replace('/upload/', '/upload/w_160,h_160,c_fill,q_auto,f_auto/')}
+            alt="Current school logo"
+            className="h-20 w-20 rounded-lg border border-border object-cover"
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={openPicker}
+              disabled={busy}
+              className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? busyLabel[phase] : 'Replace'}
+            </button>
+            <button
+              type="button"
+              onClick={onRemoved}
+              disabled={busy}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-4">
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 text-[10px] uppercase tracking-wider text-muted-foreground">
+            No logo
+          </div>
+          <button
+            type="button"
+            onClick={openPicker}
+            disabled={busy}
+            className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? busyLabel[phase] : 'Upload logo'}
+          </button>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        PNG, JPG, or WebP. 2 MB max. Square images look best.
+      </p>
     </div>
   )
 }
