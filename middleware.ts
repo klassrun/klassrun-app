@@ -41,7 +41,8 @@ export function middleware(request: NextRequest) {
     // /dashboard/teachers and /dashboard/settings are SCHOOL_ADMIN only
     if (
       (pathname.startsWith('/dashboard/teachers') ||
-       pathname.startsWith('/dashboard/settings')) &&
+       pathname.startsWith('/dashboard/settings') ||
+       pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
       role !== 'SCHOOL_ADMIN'
     ) {
       const url = request.nextUrl.clone()
