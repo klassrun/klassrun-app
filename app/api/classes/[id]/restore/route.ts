@@ -1,0 +1,33 @@
+// app/api/classes/[id]/restore/route.ts
+// batch-2c-phase-2-classes-proxy-restore
+
+import { NextResponse, type NextRequest } from 'next/server'
+import { cookies } from 'next/headers'
+import { AUTH_COOKIE_NAME } from '@/lib/auth-cookie'
+
+const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com'
+
+async function getToken(): Promise<string | null> {
+  const store = await cookies()
+  return store.get(AUTH_COOKIE_NAME)?.value ?? null
+}
+
+export async function POST(
+  request: NextRequest,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const token = await getToken()
+  if (!token) return NextResponse.json({ error: { message: 'Not authenticated' } }, { status: 401 })
+
+  const { id } = await ctx.params
+  const res = await fetch(`${API_BASE}/api/classes/${encodeURIComponent(id)}/restore`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  })
+  const body = await res.json().catch(() => ({}))
+  return NextResponse.json(body, { status: res.status })
+}

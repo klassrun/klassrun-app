@@ -42,6 +42,7 @@ export function middleware(request: NextRequest) {
     if (
       (pathname.startsWith('/dashboard/teachers') ||
        pathname.startsWith('/dashboard/settings') ||
+       pathname.startsWith('/dashboard/classes') || // batch-2c-phase-2-classes-gate
        pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
       role !== 'SCHOOL_ADMIN'
     ) {

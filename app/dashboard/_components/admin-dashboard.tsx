@@ -141,6 +141,17 @@ export function AdminDashboard({
               </svg>
             </Link>
 
+            {/* batch-2c-phase-2-classes-link */}
+            <Link
+              href="/dashboard/classes"
+              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+            >
+              Classes
+              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+
             <Link
               href="/dashboard/settings"
               className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
