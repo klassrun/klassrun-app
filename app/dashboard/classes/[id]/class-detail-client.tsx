@@ -1,6 +1,6 @@
 'use client'
-// app/dashboard/classes/classes-client.tsx
-// batch-2c-phase-2-classes-client
+// app/dashboard/classes/[id]/class-detail-client.tsx
+// batch-2c-phase-3a-class-detail-client
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
@@ -17,29 +17,43 @@ type ClassItem = {
   _count: { subjects: number }
 }
 
-type LevelValue = 'junior' | 'senior' | ''
+type Subject = {
+  id: string
+  name: string
+  teacherId: string | null
+  archivedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
 
 const LEVEL_LABEL: Record<string, string> = {
   junior: 'Junior secondary',
   senior: 'Senior secondary',
 }
 
-export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] }) {
+export function ClassDetailClient({
+  initialClass,
+  initialSubjects,
+}: {
+  initialClass: ClassItem
+  initialSubjects: Subject[]
+}) {
   const router = useRouter()
   const [, startTransition] = useTransition()
-  const [classes, setClasses] = useState<ClassItem[]>(initialClasses)
+  const [cls] = useState<ClassItem>(initialClass)
+  const [subjects, setSubjects] = useState<Subject[]>(initialSubjects)
   const [showArchived, setShowArchived] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
-  const [editing, setEditing] = useState<ClassItem | null>(null)
-  const [archiving, setArchiving] = useState<ClassItem | null>(null)
+  const [editing, setEditing] = useState<Subject | null>(null)
+  const [archiving, setArchiving] = useState<Subject | null>(null)
   const [loadingArchived, setLoadingArchived] = useState(false)
 
   async function reload(includeArchived: boolean) {
     const qs = includeArchived ? '?includeArchived=true' : ''
-    const res = await fetch(`/api/classes${qs}`, { cache: 'no-store' })
+    const res = await fetch(`/api/classes/${cls.id}/subjects${qs}`, { cache: 'no-store' })
     if (!res.ok) return
     const data = await res.json().catch(() => null)
-    if (data?.classes) setClasses(data.classes)
+    if (data?.subjects) setSubjects(data.subjects)
   }
 
   async function toggleArchived() {
@@ -50,21 +64,14 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
     setLoadingArchived(false)
   }
 
-  const active = classes.filter((c) => !c.archivedAt)
-  const archived = classes.filter((c) => !!c.archivedAt)
+  const active = subjects.filter((s) => !s.archivedAt)
+  const archived = subjects.filter((s) => !!s.archivedAt)
 
-  // Group active by level
-  const grouped: Record<string, ClassItem[]> = { junior: [], senior: [], '': [] }
-  for (const c of active) {
-    const key = c.level && (c.level === 'junior' || c.level === 'senior') ? c.level : ''
-    grouped[key].push(c)
-  }
-
-  async function handleRestore(item: ClassItem) {
-    const res = await fetch(`/api/classes/${item.id}/restore`, { method: 'POST' })
+  async function handleRestore(item: Subject) {
+    const res = await fetch(`/api/subjects/${item.id}/restore`, { method: 'POST' })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
-      toast.error(body?.error?.message || 'Could not restore class')
+      toast.error(body?.error?.message || 'Could not restore subject')
       return
     }
     toast.success(`${item.name} restored`)
@@ -72,26 +79,39 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
     startTransition(() => router.refresh())
   }
 
+  const levelDisplay =
+    cls.level === 'junior'
+      ? LEVEL_LABEL.junior
+      : cls.level === 'senior'
+        ? LEVEL_LABEL.senior
+        : 'Level not specified'
+
+  const subjectCount = active.length
+  const subjectCountLabel =
+    subjectCount === 0 ? 'No subjects yet' : subjectCount === 1 ? '1 subject' : `${subjectCount} subjects`
+
   return (
     <div className="min-h-screen bg-paper text-foreground">
       <header className="border-b border-border bg-card/60">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 sm:px-8">
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            ← Back to dashboard
+          <Link
+            href="/dashboard/classes"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back to classes
           </Link>
         </div>
       </header>
 
       <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8 lg:py-16">
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-primary">
-          Academic structure
+          Class structure
         </p>
         <h1 className="font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">
-          Classes & levels
+          {cls.name}
         </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
-          Set up the classes your school teaches. Each class becomes a target for
-          lesson notes, assessments, and timetables.
+          {levelDisplay} · {subjectCountLabel} · Updated {formatDate(cls.updatedAt)}
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
@@ -100,7 +120,7 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
             onClick={() => setCreateOpen(true)}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
-            + New class
+            + New subject
           </button>
 
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
@@ -117,45 +137,34 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
         {active.length === 0 && (
           <div className="mt-10 rounded-xl border bg-card px-6 py-12 text-center">
             <p className="text-base text-muted-foreground">
-              No classes yet. Add JSS 1 to get started.
+              No subjects yet. Add Mathematics to get started.
             </p>
             <button
               type="button"
               onClick={() => setCreateOpen(true)}
               className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              + New class
+              + New subject
             </button>
           </div>
         )}
 
         {active.length > 0 && (
-          <div className="mt-10 space-y-10">
-            {(['junior', 'senior', ''] as const).map((levelKey) => {
-              const items = grouped[levelKey]
-              if (items.length === 0) return null
-              const header =
-                levelKey === '' ? 'Not specified' : LEVEL_LABEL[levelKey]
-              return (
-                <section key={levelKey}>
-                  <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {header}
-                  </h2>
-                  <div className="overflow-hidden rounded-xl border bg-card divide-y">
-                    {items.map((c) => (
-                      <ClassRow
-                        key={c.id}
-                        item={c}
-                        onEdit={() => setEditing(c)}
-                        onArchive={() => setArchiving(c)}
-                        clickable={!c.archivedAt}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )
-            })}
-          </div>
+          <section className="mt-10">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Subjects
+            </h2>
+            <div className="overflow-hidden rounded-xl border bg-card divide-y">
+              {active.map((s) => (
+                <SubjectRow
+                  key={s.id}
+                  item={s}
+                  onEdit={() => setEditing(s)}
+                  onArchive={() => setArchiving(s)}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         {showArchived && (
@@ -167,21 +176,21 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
               <p className="text-sm text-muted-foreground">Loading…</p>
             )}
             {!loadingArchived && archived.length === 0 && (
-              <p className="text-sm text-muted-foreground">No archived classes.</p>
+              <p className="text-sm text-muted-foreground">No archived subjects.</p>
             )}
             {archived.length > 0 && (
               <div className="overflow-hidden rounded-xl border bg-card divide-y">
-                {archived.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between px-6 py-4">
+                {archived.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between px-6 py-4">
                     <div>
-                      <p className="font-medium">{c.name}</p>
+                      <p className="font-medium">{s.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Archived {formatDate(c.archivedAt!)}
+                        Archived {formatDate(s.archivedAt!)}
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRestore(c)}
+                      onClick={() => handleRestore(s)}
                       className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
                     >
                       Restore
@@ -195,8 +204,9 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
       </div>
 
       {createOpen && (
-        <ClassFormDialog
+        <SubjectFormDialog
           mode="create"
+          classId={cls.id}
           onClose={() => setCreateOpen(false)}
           onSaved={async () => {
             setCreateOpen(false)
@@ -207,8 +217,9 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
       )}
 
       {editing && (
-        <ClassFormDialog
+        <SubjectFormDialog
           mode="edit"
+          classId={cls.id}
           initial={editing}
           onClose={() => setEditing(null)}
           onSaved={async () => {
@@ -220,7 +231,7 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
       )}
 
       {archiving && (
-        <ArchiveConfirmDialog
+        <ArchiveSubjectDialog
           item={archiving}
           onClose={() => setArchiving(null)}
           onArchived={async () => {
@@ -234,36 +245,32 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
   )
 }
 
-function ClassRow({
+function SubjectRow({
   item,
   onEdit,
   onArchive,
-  clickable,
 }: {
-  item: ClassItem
+  item: Subject
   onEdit: () => void
   onArchive: () => void
-  clickable: boolean
 }) {
-  const subjectLabel =
-    item._count.subjects === 1 ? '1 subject' : `${item._count.subjects} subjects`
-  const content = (
+  return (
     <div className="flex items-center justify-between px-6 py-4">
       <div>
         <p className="font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">{subjectLabel}</p>
+        <p className="text-xs text-muted-foreground">Created {formatDate(item.createdAt)}</p>
       </div>
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(); }}
+          onClick={onEdit}
           className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
           Edit
         </button>
         <button
           type="button"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onArchive(); }}
+          onClick={onArchive}
           className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
         >
           Archive
@@ -271,61 +278,52 @@ function ClassRow({
       </div>
     </div>
   )
-  // batch-2c-phase-3a-classes-clickable
-  if (clickable) {
-    return (
-      <Link href={`/dashboard/classes/${item.id}`} className="block hover:bg-muted/40 transition-colors">
-        {content}
-      </Link>
-    )
-  }
-  return content
-
 }
 
-function ClassFormDialog({
+function SubjectFormDialog({
   mode,
+  classId,
   initial,
   onClose,
   onSaved,
 }: {
   mode: 'create' | 'edit'
-  initial?: ClassItem
+  classId: string
+  initial?: Subject
   onClose: () => void
   onSaved: () => void | Promise<void>
 }) {
   const [name, setName] = useState(initial?.name ?? '')
-  const [level, setLevel] = useState<LevelValue>(
-    (initial?.level === 'junior' || initial?.level === 'senior'
-      ? (initial.level as LevelValue)
-      : '')
-  )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function submit() {
     setError(null)
     const trimmed = name.trim()
-    if (!trimmed) { setError('Class name is required'); return }
-    if (trimmed.length > 30) { setError('Class name must be 30 characters or fewer'); return }
+    if (!trimmed) {
+      setError('Subject name is required')
+      return
+    }
+    if (trimmed.length > 50) {
+      setError('Subject name must be 50 characters or fewer')
+      return
+    }
 
     setSubmitting(true)
-    const payload: Record<string, any> = { name: trimmed }
-    payload.level = level === '' ? null : level
-
-    const url = mode === 'create' ? '/api/classes' : `/api/classes/${initial!.id}`
+    const url =
+      mode === 'create' ? `/api/classes/${classId}/subjects` : `/api/subjects/${initial!.id}`
     const method = mode === 'create' ? 'POST' : 'PATCH'
 
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ name: trimmed }),
     })
     setSubmitting(false)
 
     if (!res.ok) {
       const body = await res.json().catch(() => null)
-      setError(body?.error?.message || 'Could not save class')
+      setError(body?.error?.message || 'Could not save subject')
       return
     }
 
@@ -345,77 +343,30 @@ function ClassFormDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="font-display text-2xl font-medium leading-tight tracking-tight">
-          {mode === 'create' ? 'Add a class' : 'Edit class'}
+          {mode === 'create' ? 'Add a subject' : 'Edit subject'}
         </h2>
 
         <div className="mt-6 space-y-5">
           <div>
-            <label htmlFor="class-name" className="block text-xs font-medium text-foreground">
+            <label htmlFor="subject-name" className="block text-xs font-medium text-foreground">
               Name <span className="text-red-500">*</span>
             </label>
             <input
-              id="class-name"
+              id="subject-name"
               type="text"
               value={name}
-              maxLength={30}
+              maxLength={50}
               onChange={(e) => setName(e.target.value)}
               autoFocus
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              placeholder="e.g. JSS 1"
+              placeholder="e.g. Mathematics"
             />
+            <p className="mt-1 text-xs text-muted-foreground">
+              e.g. Mathematics, English Language, Basic Science
+            </p>
           </div>
 
-          <div>
-            <p className="block text-xs font-medium text-foreground">Level</p>
-            <div className="mt-2 space-y-2">
-              <label className="flex items-start gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value="junior"
-                  checked={level === 'junior'}
-                  onChange={() => setLevel('junior')}
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="font-medium">Junior secondary</span>
-                  <span className="block text-xs text-muted-foreground">For JSS, primary, pre-school</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value="senior"
-                  checked={level === 'senior'}
-                  onChange={() => setLevel('senior')}
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="font-medium">Senior secondary</span>
-                  <span className="block text-xs text-muted-foreground">For SS, advanced levels</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-2 text-sm cursor-pointer">
-                <input
-                  type="radio"
-                  name="level"
-                  value=""
-                  checked={level === ''}
-                  onChange={() => setLevel('')}
-                  className="mt-0.5"
-                />
-                <span>
-                  <span className="font-medium">Not specified</span>
-                  <span className="block text-xs text-muted-foreground">For nursery, crèche, or anything else</span>
-                </span>
-              </label>
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-600">{error}</p>
-          )}
+          {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
 
         <div className="mt-6 flex items-center justify-end gap-2">
@@ -440,25 +391,24 @@ function ClassFormDialog({
   )
 }
 
-function ArchiveConfirmDialog({
+function ArchiveSubjectDialog({
   item,
   onClose,
   onArchived,
 }: {
-  item: ClassItem
+  item: Subject
   onClose: () => void
   onArchived: () => void | Promise<void>
 }) {
   const [submitting, setSubmitting] = useState(false)
-  const hasSubjects = item._count.subjects > 0
 
   async function confirm() {
     setSubmitting(true)
-    const res = await fetch(`/api/classes/${item.id}/archive`, { method: 'POST' })
+    const res = await fetch(`/api/subjects/${item.id}/archive`, { method: 'POST' })
     setSubmitting(false)
     if (!res.ok) {
       const body = await res.json().catch(() => null)
-      toast.error(body?.error?.message || 'Could not archive class')
+      toast.error(body?.error?.message || 'Could not archive subject')
       return
     }
     toast.success(`${item.name} archived`)
@@ -480,15 +430,12 @@ function ArchiveConfirmDialog({
           Archive {item.name}?
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {hasSubjects ? (
-            <>
-              This class has {item._count.subjects === 1 ? '1 subject' : `${item._count.subjects} subjects`} attached.
-              Archiving won&apos;t delete them, but they&apos;ll become inaccessible until you restore the class.
-              Lesson notes and assessments already created remain intact.
-            </>
-          ) : (
-            <>This class has no subjects yet. Archiving is fully reversible.</>
-          )}
+          Archiving makes this subject inaccessible until you restore it. Future lesson notes and
+          assessments can&apos;t be created for this subject. Existing content remains intact and
+          viewable.
+          <br />
+          <br />
+          Archiving is fully reversible.
         </p>
 
         <div className="mt-6 flex items-center justify-end gap-2">
