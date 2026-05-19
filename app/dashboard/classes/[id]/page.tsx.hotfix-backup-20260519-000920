@@ -17,12 +17,10 @@ type ClassItem = {
   _count: { subjects: number }
 }
 
-// batch-2c-phase-3b-page-hotfix
 type Subject = {
   id: string
   name: string
   teacherId: string | null
-  teacher: { id: string; firstName: string; lastName: string; email: string } | null
   archivedAt: string | null
   createdAt: string
   updatedAt: string

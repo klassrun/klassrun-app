@@ -1,11 +1,16 @@
 'use client'
 // app/dashboard/classes/[id]/class-detail-client.tsx
 // batch-2c-phase-3a-class-detail-client
+// batch-2c-phase-3b-teacher-display
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import {
+  TeacherPickerDialog,
+  type SubjectForPicker,
+} from '@/app/dashboard/_components/teacher-picker'
 
 type ClassItem = {
   id: string
@@ -17,10 +22,18 @@ type ClassItem = {
   _count: { subjects: number }
 }
 
+type SubjectTeacher = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+}
+
 type Subject = {
   id: string
   name: string
   teacherId: string | null
+  teacher: SubjectTeacher | null
   archivedAt: string | null
   createdAt: string
   updatedAt: string
@@ -46,6 +59,7 @@ export function ClassDetailClient({
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<Subject | null>(null)
   const [archiving, setArchiving] = useState<Subject | null>(null)
+  const [pickingTeacherFor, setPickingTeacherFor] = useState<Subject | null>(null)
   const [loadingArchived, setLoadingArchived] = useState(false)
 
   async function reload(includeArchived: boolean) {
@@ -161,6 +175,7 @@ export function ClassDetailClient({
                   item={s}
                   onEdit={() => setEditing(s)}
                   onArchive={() => setArchiving(s)}
+                  onPickTeacher={() => setPickingTeacherFor(s)}
                 />
               ))}
             </div>
@@ -241,6 +256,18 @@ export function ClassDetailClient({
           }}
         />
       )}
+
+      {pickingTeacherFor && (
+        <TeacherPickerDialog
+          subject={pickingTeacherFor as SubjectForPicker}
+          onClose={() => setPickingTeacherFor(null)}
+          onSaved={async () => {
+            setPickingTeacherFor(null)
+            await reload(showArchived)
+            startTransition(() => router.refresh())
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -249,18 +276,37 @@ function SubjectRow({
   item,
   onEdit,
   onArchive,
+  onPickTeacher,
 }: {
   item: Subject
   onEdit: () => void
   onArchive: () => void
+  onPickTeacher: () => void
 }) {
+  const teacherName = item.teacher
+    ? `${item.teacher.firstName} ${item.teacher.lastName}`.trim()
+    : null
+
   return (
-    <div className="flex items-center justify-between px-6 py-4">
-      <div>
+    <div className="flex items-center justify-between px-6 py-4 gap-4">
+      <div className="min-w-0 flex-1">
         <p className="font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">Created {formatDate(item.createdAt)}</p>
+        {teacherName ? (
+          <p className="text-xs text-muted-foreground">
+            Teacher: <span className="text-foreground">{teacherName}</span>
+          </p>
+        ) : (
+          <p className="text-xs text-amber-600">⚠ Unassigned</p>
+        )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onPickTeacher}
+          className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+        >
+          {teacherName ? 'Change' : 'Assign'}
+        </button>
         <button
           type="button"
           onClick={onEdit}
