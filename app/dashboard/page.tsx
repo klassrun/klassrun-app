@@ -69,7 +69,29 @@ export default async function DashboardPage() {
   const schoolData = await getSchool(token)
 
   if (user.role === 'TEACHER') {
-    return <TeacherDashboard me={user} />
+    // batch-2c-phase-4a-teacher-dashboard-fetch
+    const assignmentsResult = await apiFetch<{
+      assignments: Array<{
+        class: { id: string; name: string; level: string | null }
+        subjects: Array<{
+          id: string
+          name: string
+          archivedAt: string | null
+          createdAt: string
+        }>
+      }>
+      totalSubjects: number
+      totalClasses: number
+    }>('/api/teachers/me/assignments', { token })
+
+    return (
+      <TeacherDashboard
+        me={user}
+        assignments={assignmentsResult.data?.assignments ?? []}
+        totalSubjects={assignmentsResult.data?.totalSubjects ?? 0}
+        totalClasses={assignmentsResult.data?.totalClasses ?? 0}
+      />
+    )
   }
 
   // SCHOOL_ADMIN (and fallthrough)

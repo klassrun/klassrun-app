@@ -3,6 +3,7 @@
 // Dashboard view for TEACHER users.
 // Same shell as admin (top bar + sidebar + main) — different content.
 
+// batch-2c-phase-4a-teacher-dashboard
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -23,7 +24,27 @@ type Me = {
   } | null
 }
 
-export function TeacherDashboard({ me }: { me: Me }) {
+type Assignment = {
+  class: { id: string; name: string; level: string | null }
+  subjects: Array<{
+    id: string
+    name: string
+    archivedAt: string | null
+    createdAt: string
+  }>
+}
+
+export function TeacherDashboard({
+  me,
+  assignments,
+  totalSubjects,
+  totalClasses,
+}: {
+  me: Me
+  assignments: Assignment[]
+  totalSubjects: number
+  totalClasses: number
+}) {
   const schoolName = me.school?.name ?? 'Your school'
   const session    = me.school?.currentSession
   const status     = me.school?.status ?? 'PROVISIONING'
@@ -125,42 +146,69 @@ export function TeacherDashboard({ me }: { me: Me }) {
             </p>
           </div>
 
-          {/* Your classes — empty state */}
+          {/* batch-2c-phase-4a-stats-row */}
+          <section className="mb-10">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <StatCard label="Subjects assigned" value={String(totalSubjects)} />
+              <StatCard label="Classes" value={String(totalClasses)} />
+              <StatCard label="Notes this week" value="—" muted />
+            </div>
+          </section>
+
+          {/* batch-2c-phase-4a-assignments */}
           <section className="mb-10">
             <h2 className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               Your classes
             </h2>
-            <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                Your school admin hasn&apos;t assigned you to any classes yet.
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Once they do, your classes will appear here.
-              </p>
-            </div>
+            {assignments.length === 0 ? (
+              <div className="rounded-xl border border-dashed bg-card/40 p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  You haven&apos;t been assigned to any subjects yet.
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ask your school admin to assign you.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {assignments.map((a) => (
+                  <div
+                    key={a.class.id}
+                    className="rounded-xl border bg-card p-6"
+                  >
+                    <div className="mb-4 flex items-baseline justify-between gap-3">
+                      <h3 className="font-display text-lg font-medium leading-tight tracking-tight">
+                        {a.class.name}
+                      </h3>
+                      <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {levelLabel(a.class.level)}
+                      </span>
+                    </div>
+                    <ul className="space-y-2">
+                      {a.subjects.map((s) => (
+                        <li
+                          key={s.id}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                          <span>{s.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
-          {/* Quick actions — stubs until Batch 3 */}
+          {/* batch-2c-phase-4a-coming-soon */}
           <section>
             <h2 className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Quick actions
+              Coming soon
             </h2>
-            <div className="rounded-xl border bg-card p-6">
-              <div className="flex items-start gap-4">
-                <span className="editorial-number text-3xl text-primary/30">01</span>
-                <div className="flex-1">
-                  <h3 className="font-display text-lg font-medium leading-tight tracking-tight">
-                    Generate a lesson note
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Coming soon. Once classes are assigned, you&apos;ll generate
-                    curriculum-aligned lesson notes here in seconds.
-                  </p>
-                </div>
-                <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Soon
-                </span>
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <ComingSoonCard num="01" title="AI Lesson Notes" body="Generate curriculum-aligned lesson notes for any class and topic, in seconds." />
+              <ComingSoonCard num="02" title="AI Exam Questions" body="WAEC- and NECO-style questions tailored to your class, with built-in deduplication." />
             </div>
           </section>
 
@@ -175,6 +223,65 @@ export function TeacherDashboard({ me }: { me: Me }) {
       </div>
     </div>
   )
+}
+
+function StatCard({
+  label, value, muted,
+}: {
+  label: string
+  value: string
+  muted?: boolean
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-5">
+      <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
+      <p
+        className={[
+          'mt-2 font-display text-3xl font-medium leading-none tracking-tight',
+          muted ? 'text-muted-foreground' : 'text-foreground',
+        ].filter(Boolean).join(' ')}
+      >
+        {value}
+      </p>
+    </div>
+  )
+}
+
+function ComingSoonCard({
+  num, title, body,
+}: {
+  num: string
+  title: string
+  body: string
+}) {
+  return (
+    <div className="rounded-xl border border-dashed bg-card/40 p-6 opacity-70">
+      <div className="flex items-start gap-4">
+        <span className="editorial-number text-3xl text-primary/30">{num}</span>
+        <div className="flex-1">
+          <h3 className="font-display text-lg font-medium leading-tight tracking-tight">
+            {title}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {body}
+          </p>
+        </div>
+        <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          Soon
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function levelLabel(level: string | null): string {
+  if (!level) return 'Not specified'
+  const l = level.toLowerCase()
+  if (l === 'junior') return 'Junior'
+  if (l === 'senior') return 'Senior'
+  return level
 }
 
 function Row({
