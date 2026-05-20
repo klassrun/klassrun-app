@@ -1,16 +1,17 @@
-// middleware.ts
+// proxy.ts
 //
 // Route guard. Runs at the edge for every request matching the matcher below.
 // Redirects unauthenticated users away from protected routes, and bounces
 // already-authenticated users away from /login + /signup.
 
+// batch-2c-phase-4b-hotfix-proxy-export
 import { NextResponse, type NextRequest } from 'next/server'
 import { AUTH_COOKIE_NAME, ROLE_COOKIE_NAME } from '@/lib/auth-cookie'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/admin']
 const AUTH_PAGES         = ['/login', '/signup']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hasToken = !!request.cookies.get(AUTH_COOKIE_NAME)?.value
 

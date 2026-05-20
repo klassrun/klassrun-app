@@ -130,37 +130,58 @@ export function AdminDashboard({
               Role · {me.role.replace('_', ' ').toLowerCase()}
             </p>
 
-            {/* batch-2c-phase-1-academic-link */}
-            <Link
-              href="/dashboard/academic"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
-            >
-              Academic year
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
+            {/* batch-2c-phase-4b-sidebar-ia */}
+            <nav className="mt-4 space-y-4">
+              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Academic
+              </p>
+              <div className="space-y-3 pl-1">
+                {/* batch-2c-phase-1-academic-link */}
+                <Link
+                  href="/dashboard/academic"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Sessions & terms
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
 
-            {/* batch-2c-phase-2-classes-link */}
-            <Link
-              href="/dashboard/classes"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
-            >
-              Classes
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
+                {/* batch-2c-phase-2-classes-link */}
+                <Link
+                  href="/dashboard/classes"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Classes
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
 
-            <Link
-              href="/dashboard/settings"
-              className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
-            >
-              School settings
-              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
+                {/* batch-2c-phase-4b-teachers-link */}
+                <Link
+                  href="/dashboard/teachers"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Teachers
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+              </div>
+
+              <div className="border-t" />
+
+              <Link
+                href="/dashboard/settings"
+                className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+              >
+                Settings
+                <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </nav>
           </div>
         </aside>
 
@@ -210,13 +231,15 @@ export function AdminDashboard({
               cta="Invite teachers"
               href="/dashboard/teachers"
             />
+            {/* batch-2c-phase-4b-step-three-dormant */}
             <OnboardingStep
               number="03"
               title="Generate your first lesson note"
               body="Pick a class, subject, and topic. We do the rest — formatted, curriculum-aligned, ready in seconds."
-              cta="Generate lesson note"
-              href="/dashboard/lessons/new"
+              cta="Coming in your next update"
+              href="#"
               accent
+              disabled
             />
           </div>
 
@@ -259,7 +282,8 @@ function StatusRow({
 }
 
 function OnboardingStep({
-  number, title, body, cta, href, accent,
+  // batch-2c-phase-4b-onboarding-step-disabled
+  number, title, body, cta, href, accent, disabled,
 }: {
   number: string
   title: string
@@ -267,17 +291,20 @@ function OnboardingStep({
   cta: string
   href: string
   accent?: boolean
+  disabled?: boolean
 }) {
-  return (
-    <Link
-      href={href}
-      className={[
-        'group flex flex-col gap-4 px-6 py-6 transition-colors sm:flex-row sm:items-center sm:gap-8 sm:px-8 sm:py-7',
-        'hover:bg-muted/40',
-        accent ? 'bg-accent/30' : 'bg-card',
-      ].join(' ')}
-    >
-      <p className="editorial-number text-4xl text-primary/40 transition-colors group-hover:text-primary sm:text-5xl">
+  const baseClasses = [
+    'group flex flex-col gap-4 px-6 py-6 transition-colors sm:flex-row sm:items-center sm:gap-8 sm:px-8 sm:py-7',
+    disabled ? 'cursor-default opacity-70' : 'hover:bg-muted/40',
+    accent ? 'bg-accent/30' : 'bg-card',
+  ].join(' ')
+
+  const content = (
+    <>
+      <p className={[
+        'editorial-number text-4xl text-primary/40 transition-colors sm:text-5xl',
+        disabled ? '' : 'group-hover:text-primary',
+      ].join(' ')}>
         {number}
       </p>
       <div className="flex-1">
@@ -288,14 +315,26 @@ function OnboardingStep({
           {body}
         </p>
       </div>
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground transition-colors group-hover:text-primary sm:flex-shrink-0">
+      <div className={[
+        'flex items-center gap-2 text-sm font-medium transition-colors sm:flex-shrink-0',
+        disabled
+          ? 'text-muted-foreground'
+          : 'text-foreground group-hover:text-primary',
+      ].join(' ')}>
         {cta}
-        <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        {!disabled && (
+          <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
       </div>
-    </Link>
+    </>
   )
+
+  if (disabled) {
+    return <div className={baseClasses} aria-disabled="true">{content}</div>
+  }
+  return <Link href={href} className={baseClasses}>{content}</Link>
 }
 
 function greetingFor(now: Date): string {
