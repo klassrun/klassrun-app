@@ -52,6 +52,15 @@ export function proxy(request: NextRequest) {
       url.search = ''
       return NextResponse.redirect(url)
     }
+
+    // batch-3-phase-1-lessons-gate
+    // /dashboard/lessons is TEACHER-only (admins can view via API but not the UI)
+    if (pathname.startsWith('/dashboard/lessons') && role !== 'TEACHER') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
   }
 
   // Logged-in user visiting /login or /signup → /dashboard

@@ -207,7 +207,17 @@ export function TeacherDashboard({
               Coming soon
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <ComingSoonCard num="01" title="AI Lesson Notes" body="Generate curriculum-aligned lesson notes for any class and topic, in seconds." />
+              <Link href="/dashboard/lessons/new" className="rounded-xl border bg-card p-6 hover:bg-muted/40 transition-colors">
+              {/* batch-3-phase-1-lessons-cta */}
+              <div className="flex items-start gap-4">
+                <span className="editorial-number text-3xl text-primary">01</span>
+                <div className="flex-1">
+                  <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Lesson Notes</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Generate curriculum-aligned lesson notes for any class and topic, in seconds.</p>
+                </div>
+                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
+              </div>
+            </Link>
               <ComingSoonCard num="02" title="AI Exam Questions" body="WAEC- and NECO-style questions tailored to your class, with built-in deduplication." />
             </div>
           </section>
