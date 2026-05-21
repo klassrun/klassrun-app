@@ -5,7 +5,11 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
-import { LessonNoteRender } from '../new/new-lesson-client'
+// batch-3-phase-1-5-detail-import
+import { LessonNoteRender } from '../_components/lesson-note-render'
+
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
 
 type Note = {
   id: string

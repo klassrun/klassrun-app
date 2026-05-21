@@ -17,6 +17,9 @@ import { getAuthCookie } from '@/lib/auth-cookie'
 import { apiFetch } from '@/lib/api'
 import { TeachersClient } from './teachers-client'
 
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
+
 type MeResponse = {
   user: {
     id: string

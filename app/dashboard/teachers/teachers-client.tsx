@@ -6,7 +6,7 @@
 // component fetches the initial list; this component handles the
 // interactive parts: inviting, revoking, resetting.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,6 +32,14 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
   const [inviteLastName,  setInviteLastName]  = useState('')
   const [inviteEmail,     setInviteEmail]     = useState('')
   const [inviting, setInviting] = useState(false)
+
+  // batch-3-phase-1-5-prop-sync
+  // Sync local state when server-fetched props refresh.
+  // Without this, router.refresh() re-runs the server component but the new
+  // initialTeachers prop is dropped on the floor by useState's first-call lock.
+  useEffect(() => {
+    setTeachers(initialTeachers)
+  }, [initialTeachers])
 
   function showSuccess(text: string) {
     setStatusMessage({ kind: 'success', text })

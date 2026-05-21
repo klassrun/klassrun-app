@@ -7,6 +7,9 @@ import { getAuthCookie } from '@/lib/auth-cookie'
 import { apiFetch } from '@/lib/api'
 import { ClassDetailClient } from './class-detail-client'
 
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
+
 type ClassItem = {
   id: string
   name: string

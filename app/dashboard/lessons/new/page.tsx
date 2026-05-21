@@ -6,6 +6,9 @@ import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
 import { NewLessonClient } from './new-lesson-client'
 
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
+
 type Assignment = {
   class: { id: string; name: string; level: string | null }
   subjects: Array<{ id: string; name: string; archivedAt: string | null; createdAt: string }>

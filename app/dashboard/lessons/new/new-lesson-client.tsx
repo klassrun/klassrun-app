@@ -6,6 +6,8 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+// batch-3-phase-1-5-extracted-render
+import { LessonNoteRender } from '../_components/lesson-note-render'
 
 type Assignment = {
   class: { id: string; name: string; level: string | null }
@@ -31,6 +33,8 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
   const [week, setWeek] = useState<string>('')
   const [duration, setDuration] = useState<string>('40')
   const [additionalNotes, setAdditionalNotes] = useState('')
+  // batch-3-phase-1-5-subtopics-state
+  const [subTopicsText, setSubTopicsText] = useState('')
 
   const [stage, setStage] = useState<Stage>('SELECTING')
   const [error, setError] = useState<string | null>(null)
@@ -95,6 +99,13 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
     }
     if (week.trim()) body.week = Number(week)
     if (additionalNotes.trim()) body.additionalNotes = additionalNotes.trim()
+    // batch-3-phase-1-5-subtopics-body
+    const subTopics = subTopicsText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .slice(0, 10)
+    if (subTopics.length > 0) body.subTopics = subTopics
 
     const res = await fetch('/api/notes/generate', {
       method: 'POST',
@@ -247,6 +258,25 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
               </p>
             </div>
 
+            {/* batch-3-phase-1-5-subtopics-ui */}
+            <div>
+              <label htmlFor="subtopics" className="block text-xs font-medium text-foreground">
+                Sub-topics (optional, one per line)
+              </label>
+              <textarea
+                id="subtopics"
+                rows={3}
+                value={subTopicsText}
+                onChange={(e) => setSubTopicsText(e.target.value)}
+                placeholder={"e.g.\nIn plants\nIn animals\nThe energy conversion"}
+                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                The AI will use these sub-topics as section headers, in the order you list them.
+                Leave blank to let the AI decide the structure.
+              </p>
+            </div>
+
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
                 {error}
@@ -337,96 +367,5 @@ function Shell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
     </div>
-  )
-}
-
-// Lightweight render of the structured lesson note JSON.
-export function LessonNoteRender({ content }: { content: Record<string, unknown> }) {
-  const get = <T,>(k: string): T | undefined => content[k] as T | undefined
-  const objectives = get<string[]>('behaviouralObjectives') || []
-  const materials  = get<string[]>('instructionalMaterials') || []
-  const evaluation = get<string[]>('evaluation') || []
-  const reading    = get<string[]>('suggestedReading') || []
-  const presentation = get<Array<{
-    step: number; title: string; duration: number;
-    teacherActivity: string; pupilActivity: string;
-  }>>('presentation') || []
-
-  return (
-    <article className="space-y-8">
-      <header>
-        <h1 className="font-display text-3xl font-medium leading-tight tracking-tight">
-          {String(get<string>('title') ?? 'Untitled lesson')}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {String(get<string>('subject') ?? '')} · {String(get<string>('class') ?? '')}
-          {get<number>('week') != null && ` · Week ${get<number>('week')}`}
-          {' · '}{get<number>('duration') ?? 40} minutes
-        </p>
-      </header>
-
-      <Section title="Behavioural objectives">
-        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-          {objectives.map((o, i) => <li key={i}>{o}</li>)}
-        </ol>
-      </Section>
-
-      <Section title="Previous knowledge">
-        <p className="text-sm leading-relaxed">{String(get<string>('previousKnowledge') ?? '')}</p>
-      </Section>
-
-      <Section title="Instructional materials">
-        <ul className="list-disc pl-5 space-y-1.5 text-sm">
-          {materials.map((m, i) => <li key={i}>{m}</li>)}
-        </ul>
-      </Section>
-
-      <Section title="Presentation">
-        <div className="space-y-4">
-          {presentation.map((p, i) => (
-            <div key={i} className="rounded-lg border bg-card p-4">
-              <p className="font-medium">
-                Step {p.step}: {p.title} <span className="text-muted-foreground text-xs">({p.duration} min)</span>
-              </p>
-              <p className="mt-2 text-sm"><strong>Teacher:</strong> {p.teacherActivity}</p>
-              <p className="mt-1 text-sm"><strong>Pupils:</strong> {p.pupilActivity}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Chalkboard summary">
-        <pre className="rounded-lg bg-muted p-4 text-sm whitespace-pre-wrap font-sans">
-          {String(get<string>('chalkboardSummary') ?? '')}
-        </pre>
-      </Section>
-
-      <Section title="Evaluation">
-        <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-          {evaluation.map((e, i) => <li key={i}>{e}</li>)}
-        </ol>
-      </Section>
-
-      <Section title="Assignment">
-        <p className="text-sm leading-relaxed">{String(get<string>('assignment') ?? '')}</p>
-      </Section>
-
-      <Section title="Suggested reading">
-        <ul className="list-disc pl-5 space-y-1.5 text-sm">
-          {reading.map((r, i) => <li key={i}>{r}</li>)}
-        </ul>
-      </Section>
-    </article>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h3 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        {title}
-      </h3>
-      {children}
-    </section>
   )
 }

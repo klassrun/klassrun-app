@@ -7,6 +7,9 @@ import { cookies } from 'next/headers'
 import { AUTH_COOKIE_NAME } from '@/lib/auth-cookie'
 import { ClassesClient } from './classes-client'
 
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
+
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com'
 
 type ClassItem = {

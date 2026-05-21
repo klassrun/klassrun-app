@@ -6,6 +6,9 @@ import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
 import { LessonsClient } from './lessons-client'
 
+// batch-3-phase-1-5-force-dynamic
+export const dynamic = 'force-dynamic'
+
 type Note = {
   id: string
   topic: string

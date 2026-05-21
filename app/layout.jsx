@@ -3,6 +3,8 @@ import { Fraunces, Geist } from 'next/font/google'
 import LoadingSplash from '@/components/LoadingSplash'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 import { Toaster } from 'sonner'
+// batch-3-phase-1-5-katex-css
+import 'katex/dist/katex.min.css'
 
 const BASE_URL = 'https://app.klassrun.com'
 
