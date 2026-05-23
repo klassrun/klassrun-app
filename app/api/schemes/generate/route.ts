@@ -1,0 +1,29 @@
+// app/api/schemes/generate/route.ts
+// batch-3-phase-2-schemes-proxy-generate
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+
+const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
+
+export async function POST(req: NextRequest) {
+  const token = (await cookies()).get('klassrun_token')?.value;
+  if (!token) {
+    return NextResponse.json({ error: { message: 'Not authenticated' } }, { status: 401 });
+  }
+  let body: any = {};
+  try { body = await req.json(); } catch { /* empty body */ }
+  const res = await fetch(`${API_BASE}/api/schemes/generate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  const text = await res.text();
+  return new NextResponse(text, {
+    status: res.status,
+    headers: { 'Content-Type': res.headers.get('Content-Type') || 'application/json' },
+  });
+}

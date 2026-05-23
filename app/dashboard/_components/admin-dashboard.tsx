@@ -158,6 +158,17 @@ export function AdminDashboard({
                   </svg>
                 </Link>
 
+                {/* hotfix-batch-3-phase-2-admin-schemes-link */}
+                <Link
+                  href="/dashboard/schemes"
+                  className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
+                >
+                  Schemes of work
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+
                 {/* batch-2c-phase-4b-teachers-link */}
                 <Link
                   href="/dashboard/teachers"

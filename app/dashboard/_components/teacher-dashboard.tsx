@@ -218,7 +218,17 @@ export function TeacherDashboard({
                 <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
               </div>
             </Link>
-              <ComingSoonCard num="02" title="AI Exam Questions" body="WAEC- and NECO-style questions tailored to your class, with built-in deduplication." />
+              {/* hotfix-batch-3-phase-2-teacher-schemes-card */}
+              <Link href="/dashboard/schemes/new" className="rounded-xl border bg-card p-6 hover:bg-muted/40 transition-colors">
+                <div className="flex items-start gap-4">
+                  <span className="editorial-number text-3xl text-primary">02</span>
+                  <div className="flex-1">
+                    <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Schemes of Work</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Generate a 12-week scheme of work for any class and subject, ready to edit and share.</p>
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
+                </div>
+              </Link>
             </div>
           </section>
 
