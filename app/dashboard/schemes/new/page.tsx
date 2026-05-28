@@ -18,7 +18,27 @@ async function fetchAssignments(): Promise<any[]> {
     });
     if (!res.ok) return [];
     const body = await res.json().catch(() => ({}));
-    return Array.isArray(body.assignments) ? body.assignments : [];
+    // hotfix-batch-3-phase-2-flatten-assignments
+    // The API groups assignments by class:
+    //   { class: {id,name,level}, subjects: [{id,name}, ...] }[]
+    // The client form expects a flat list. Flatten here.
+    const grouped = Array.isArray(body.assignments) ? body.assignments : [];
+    const flat: any[] = [];
+    for (const g of grouped) {
+      const cls = g && g.class ? g.class : null;
+      const subjects = g && Array.isArray(g.subjects) ? g.subjects : [];
+      if (!cls) continue;
+      for (const s of subjects) {
+        flat.push({
+          subjectId:   s.id,
+          subjectName: s.name,
+          classId:     cls.id,
+          className:   cls.name,
+          classLevel:  cls.level ?? null,
+        });
+      }
+    }
+    return flat;
   } catch {
     return [];
   }
