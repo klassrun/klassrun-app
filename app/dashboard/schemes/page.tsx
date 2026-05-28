@@ -4,12 +4,11 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { cookies } from 'next/headers';
-
+import { getAuthCookie } from '@/lib/auth-cookie';
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
 async function fetchSchemes(): Promise<any[]> {
-  const token = (await cookies()).get('klassrun_token')?.value;
+  const token = await getAuthCookie();
   if (!token) return [];
   try {
     const res = await fetch(`${API_BASE}/api/schemes?limit=50`, {

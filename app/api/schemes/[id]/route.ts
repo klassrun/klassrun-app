@@ -1,12 +1,11 @@
 // app/api/schemes/[id]/route.ts
 // batch-3-phase-2-schemes-proxy-detail
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-
+import { getAuthCookie } from '@/lib/auth-cookie';
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
 async function forward(req: NextRequest, id: string, method: 'GET' | 'PATCH' | 'DELETE') {
-  const token = (await cookies()).get('klassrun_token')?.value;
+  const token = await getAuthCookie();
   if (!token) {
     return NextResponse.json({ error: { message: 'Not authenticated' } }, { status: 401 });
   }

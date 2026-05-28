@@ -3,13 +3,14 @@
 
 export const dynamic = 'force-dynamic';
 
-import { cookies } from 'next/headers';
+import { getAuthCookie } from '@/lib/auth-cookie';
+import { redirect } from 'next/navigation';
 import NewSchemeClient from './new-scheme-client';
 
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
 async function fetchAssignments(): Promise<any[]> {
-  const token = (await cookies()).get('klassrun_token')?.value;
+  const token = await getAuthCookie();
   if (!token) return [];
   try {
     const res = await fetch(`${API_BASE}/api/teachers/me/assignments`, {
@@ -45,7 +46,7 @@ async function fetchAssignments(): Promise<any[]> {
 }
 
 async function fetchCurrentSession(): Promise<any | null> {
-  const token = (await cookies()).get('klassrun_token')?.value;
+  const token = await getAuthCookie();
   if (!token) return null;
   try {
     const res = await fetch(`${API_BASE}/api/sessions?current=1`, {
@@ -63,7 +64,31 @@ async function fetchCurrentSession(): Promise<any | null> {
   }
 }
 
+
+// hotfix-batch-3-phase-2-auth-cookie-role-gate
+async function getRole(): Promise<string | null> {
+  const token = await getAuthCookie();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => ({}));
+    return body?.user?.role ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function NewSchemePage() {
+  // hotfix-batch-3-phase-2-auth-cookie-role-gate
+  const role = await getRole();
+  if (!role) redirect('/login');
+  if (role === 'SUPER_ADMIN') redirect('/admin');
+  if (role === 'SCHOOL_ADMIN') redirect('/dashboard/schemes');
+
   const [assignments, session] = await Promise.all([fetchAssignments(), fetchCurrentSession()]);
   return <NewSchemeClient assignments={assignments} currentSession={session} />;
 }
