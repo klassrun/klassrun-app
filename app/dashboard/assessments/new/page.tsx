@@ -69,5 +69,6 @@ export default async function NewAssessmentPage() {
   if (role === 'SCHOOL_ADMIN') redirect('/dashboard/assessments');
 
   const [assignments, session] = await Promise.all([fetchAssignments(), fetchCurrentSession()]);
+  // batch-3-phase-3c-page-session-id
   return <NewAssessmentClient assignments={assignments} currentSession={session} />;
 }
