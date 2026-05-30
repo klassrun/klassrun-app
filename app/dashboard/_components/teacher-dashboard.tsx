@@ -240,6 +240,27 @@ export function TeacherDashboard({
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
                 </div>
               </Link>
+
+          {/* batch-3-phase-3b-teacher-bank-link */}
+          <section className="mt-8">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Your question bank
+            </h2>
+            <Link
+              href="/dashboard/question-bank"
+              className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors"
+            >
+              <div>
+                <p className="text-sm font-medium">Browse question bank</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Every question your school has generated — growing each term.
+                </p>
+              </div>
+              <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </section>
             </div>
           </section>
 
