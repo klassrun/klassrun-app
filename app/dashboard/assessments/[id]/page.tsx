@@ -23,8 +23,10 @@ async function fetchAssessment(id: string): Promise<any | null> {
   } catch { return null; }
 }
 
-export default async function AssessmentDetailPage({ params }: { params: { id: string } }) {
-  const assessment = await fetchAssessment(params.id);
+// hotfix-batch-3-phase-3d-assess-detail-await-params (Bug #74)
+export default async function AssessmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const assessment = await fetchAssessment(id);
   if (!assessment) notFound();
 
   return (
