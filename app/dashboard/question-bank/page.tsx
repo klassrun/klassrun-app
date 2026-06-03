@@ -22,16 +22,31 @@ async function fetchInitialBank(): Promise<{ entries: any[]; total: number }> {
 }
 
 async function fetchSubjects(): Promise<any[]> {
+  // batch-3-phase-3d-bank-subjects-flatten
+  // /api/subjects needs a classId; the dropdown must use the teacher's
+  // assignments instead, which are grouped by class (Bug #70 — flatten + dedup).
   const token = await getAuthCookie();
   if (!token) return [];
   try {
-    const res = await fetch(`${API_BASE}/api/subjects`, {
+    const res = await fetch(`${API_BASE}/api/teachers/me/assignments`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: 'no-store',
     });
     if (!res.ok) return [];
     const body = await res.json().catch(() => ({}));
-    return Array.isArray(body.subjects) ? body.subjects : [];
+    const assignments = Array.isArray(body.assignments) ? body.assignments : [];
+    const seen = new Set<string>();
+    const flat: any[] = [];
+    for (const a of assignments) {
+      const cls = a && a.class ? { name: a.class.name } : undefined;
+      const subs = a && Array.isArray(a.subjects) ? a.subjects : [];
+      for (const s of subs) {
+        if (!s || s.archivedAt || seen.has(s.id)) continue;
+        seen.add(s.id);
+        flat.push({ id: s.id, name: s.name, class: cls });
+      }
+    }
+    return flat;
   } catch { return []; }
 }
 
