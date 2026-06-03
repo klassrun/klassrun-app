@@ -264,6 +264,42 @@ export function TeacherDashboard({
             </div>
           </section>
 
+          {/* hotfix-teacher-library-nav */}
+          <section className="mt-10">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Your library
+            </h2>
+            <div className="space-y-3">
+              <Link href="/dashboard/lessons" className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Lesson notes</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Everything you&apos;ve generated, ready to revisit or edit.</p>
+                </div>
+                <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <Link href="/dashboard/schemes" className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Schemes of work</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Your generated schemes, ready to revisit or edit.</p>
+                </div>
+                <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+              <Link href="/dashboard/assessments" className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors">
+                <div>
+                  <p className="text-sm font-medium">Exam questions</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Every set you&apos;ve generated, ready to revisit or export.</p>
+                </div>
+                <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </div>
+          </section>
+
           <p className="mt-12 max-w-xl text-xs text-muted-foreground">
             Questions? Reach us at{' '}
             <a href="mailto:info@klassrun.com" className="font-medium text-foreground hover:text-primary transition-colors">
