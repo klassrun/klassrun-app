@@ -178,7 +178,7 @@ export default function AssessmentRender({ assessment }: { assessment: Assessmen
     );
   }
 
-  const qType = content.questionType || '';
+  // hotfix-batch-3-phase-3d-qtype-dedup: removed duplicate `const qType` (declared once at top)
 
   return (
     <div className="space-y-6">
