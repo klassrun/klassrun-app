@@ -264,6 +264,20 @@ export function TeacherDashboard({
             </div>
           </section>
 
+          {/* ops-1b-teacher-nav */}
+          <section className="mt-10">
+            <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Results
+            </h2>
+            <Link href="/dashboard/results" className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors">
+              <div>
+                <p className="text-sm font-medium">Record scores</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Enter CA &amp; exam scores for your assigned subjects.</p>
+              </div>
+              <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10m0 0L8 3m5 5l-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </Link>
+          </section>
+
           {/* hotfix-teacher-library-nav */}
           <section className="mt-10">
             <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">

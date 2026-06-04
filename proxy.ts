@@ -44,9 +44,20 @@ export function proxy(request: NextRequest) {
       (pathname.startsWith('/dashboard/teachers') ||
        pathname.startsWith('/dashboard/settings') ||
        pathname.startsWith('/dashboard/classes') || // batch-2c-phase-2-classes-gate
+       pathname.startsWith('/dashboard/students') || // ops-1b-admin-gate
+       pathname.startsWith('/dashboard/report-cards') ||
        pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
       role !== 'SCHOOL_ADMIN'
     ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
+    // ops-1b-teacher-gate
+    // /dashboard/results is TEACHER-only (admins generate/lock report cards instead)
+    if (pathname.startsWith('/dashboard/results') && role !== 'TEACHER') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       url.search = ''
