@@ -190,7 +190,7 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
               <Row label="Present" value={snap.attendance.present ?? '—'} />
               <Row label="Absent" value={snap.attendance.absent ?? '—'} />
             </div>
-            <p className="mt-3 text-[11px] text-muted-foreground">Attendance data arrives in a later update.</p>
+            <p className="mt-3 text-[11px] text-muted-foreground">{/* ops-2b-view-notes */}Enter attendance on the Attendance page, then re-generate this card to include it.</p>
           </div>
           <div className="rounded-xl border bg-card p-6">
             <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Behaviour</h2>
@@ -202,7 +202,7 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[11px] text-muted-foreground">Behavioural ratings arrive in a later update.</p>
+            <p className="mt-3 text-[11px] text-muted-foreground">Enter behaviour ratings on the Behaviour page, then re-generate this card to include them.</p>
           </div>
         </section>
 

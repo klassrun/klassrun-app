@@ -216,6 +216,19 @@ export function AdminDashboard({
                   Report cards
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>
+                {/* ops-2b-admin-nav */}
+                <Link href="/dashboard/attendance" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Attendance
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+                <Link href="/dashboard/behaviour" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Behaviour
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+                <Link href="/dashboard/report-cards/comments" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Report-card comments
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
               </div>
 
               <div className="border-t" />
