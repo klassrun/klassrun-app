@@ -48,6 +48,8 @@ export function proxy(request: NextRequest) {
        pathname.startsWith('/dashboard/report-cards') ||
        pathname.startsWith('/dashboard/attendance') || // ops-2b-admin-gate
        pathname.startsWith('/dashboard/behaviour') || // ops-2b-admin-gate
+       pathname.startsWith('/dashboard/promotions') || // ops-3-admin-gate
+       pathname.startsWith('/dashboard/fees') || // ops-4-admin-gate
        pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
       role !== 'SCHOOL_ADMIN'
     ) {

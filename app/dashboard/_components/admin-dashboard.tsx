@@ -225,6 +225,16 @@ export function AdminDashboard({
                   Behaviour
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>
+                <Link href="/dashboard/promotions" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Promotions
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+                <Link href="/dashboard/fees" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Fees
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+                {/* ops-4-admin-nav */}
+                {/* ops-3-admin-nav */}
                 <Link href="/dashboard/report-cards/comments" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
                   Report-card comments
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
