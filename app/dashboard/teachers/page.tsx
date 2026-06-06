@@ -39,6 +39,7 @@ type TeachersResponse = {
     revokedAt: string | null
     createdAt: string
     status: 'ACTIVE' | 'INVITED' | 'REVOKED'
+    role: string // ops-4c-role-passthrough
   }>
 }
 

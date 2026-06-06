@@ -39,6 +39,18 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
+    // ops-4c-fees-gate — fees reachable by SCHOOL_ADMIN and BURSAR
+    if (
+      pathname.startsWith('/dashboard/fees') &&
+      role !== 'SCHOOL_ADMIN' &&
+      role !== 'BURSAR'
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
     // /dashboard/teachers and /dashboard/settings are SCHOOL_ADMIN only
     if (
       (pathname.startsWith('/dashboard/teachers') ||
@@ -49,7 +61,7 @@ export function proxy(request: NextRequest) {
        pathname.startsWith('/dashboard/attendance') || // ops-2b-admin-gate
        pathname.startsWith('/dashboard/behaviour') || // ops-2b-admin-gate
        pathname.startsWith('/dashboard/promotions') || // ops-3-admin-gate
-       pathname.startsWith('/dashboard/fees') || // ops-4-admin-gate
+       // ops-4-admin-gate — fees moved to the dedicated ops-4c-fees-gate above (BURSAR access)
        pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
       role !== 'SCHOOL_ADMIN'
     ) {

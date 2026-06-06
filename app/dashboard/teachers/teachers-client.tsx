@@ -19,6 +19,7 @@ type Teacher = {
   lastName: string
   status: 'ACTIVE' | 'INVITED' | 'REVOKED'
   createdAt: string
+  role: string
 }
 
 export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[] }) {
@@ -31,6 +32,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
   const [inviteFirstName, setInviteFirstName] = useState('')
   const [inviteLastName,  setInviteLastName]  = useState('')
   const [inviteEmail,     setInviteEmail]     = useState('')
+  const [inviteRole,      setInviteRole]      = useState('TEACHER') // ops-4c-invite-role-ui
   const [inviting, setInviting] = useState(false)
 
   // batch-3-phase-1-5-prop-sync
@@ -67,6 +69,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
           firstName: inviteFirstName,
           lastName:  inviteLastName,
           email:     inviteEmail,
+          role:      inviteRole,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -81,6 +84,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
       setInviteFirstName('')
       setInviteLastName('')
       setInviteEmail('')
+      setInviteRole('TEACHER')
       setShowInviteForm(false)
       refreshList()
     } catch {
@@ -229,6 +233,21 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
                 The teacher will receive an email with a link to set their own password.
               </p>
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="inviteRole">Role</Label>
+              <select
+                id="inviteRole"
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="TEACHER">Teacher</option>
+                <option value="BURSAR">Bursar (fees only)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                Bursars can only access the Fees workspace.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={inviting}>
                 {inviting ? 'Sending invite…' : 'Send invite'}
@@ -241,6 +260,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
                   setInviteFirstName('')
                   setInviteLastName('')
                   setInviteEmail('')
+                  setInviteRole('TEACHER')
                 }}
               >
                 Cancel
@@ -301,6 +321,9 @@ function TeacherRow({
             {teacher.firstName} {teacher.lastName}
           </p>
           <StatusBadge status={teacher.status} />
+          {teacher.role === 'BURSAR' && (
+            <span className="text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">Bursar</span>
+          )}
         </div>
         <p className="text-sm text-muted-foreground truncate mt-0.5">
           {teacher.email}

@@ -11,6 +11,7 @@ import { getAuthCookie } from '@/lib/auth-cookie'
 import { apiFetch } from '@/lib/api'
 import { AdminDashboard } from './_components/admin-dashboard'
 import { TeacherDashboard } from './_components/teacher-dashboard'
+import { BursarDashboard } from './_components/bursar-dashboard'
 
 type MeResponse = {
   user: {
@@ -62,6 +63,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser(token)
   if (!user) redirect('/login')
   if (user.role === 'SUPER_ADMIN') redirect('/admin')
+  if (user.role === 'BURSAR') return <BursarDashboard me={user} /> // ops-4c-bursar-routing
 
   // For SCHOOL_ADMIN we need teacherCount + school details.
   // For TEACHER we don't strictly need it, but the call is cheap and the
