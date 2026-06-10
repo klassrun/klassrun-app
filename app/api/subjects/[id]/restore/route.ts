@@ -1,5 +1,6 @@
 // app/api/subjects/[id]/restore/route.ts
 // batch-2c-phase-3a-subjects-restore-proxy
+// fix-1-envelope: unwrap apiFetch result; propagate real error status.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthCookie } from '@/lib/auth-cookie'
@@ -14,16 +15,16 @@ export async function POST(
 
   const { id } = await context.params
 
-  try {
-    const data = await apiFetch<{ subject: unknown }>(`/api/subjects/${id}/restore`, {
-      method: 'POST',
-      token,
-    })
-    return NextResponse.json(data)
-  } catch (e: any) {
+  const result = await apiFetch<{ subject: unknown }>(
+    `/api/subjects/${encodeURIComponent(id)}/restore`,
+    { method: 'POST', token },
+  )
+
+  if (!result.ok) {
     return NextResponse.json(
-      { error: { message: e?.message || 'Failed to restore subject' } },
-      { status: e?.status || 500 }
+      { error: result.error ?? { message: 'Failed to restore subject' } },
+      { status: result.status || 500 },
     )
   }
+  return NextResponse.json(result.data, { status: 200 })
 }

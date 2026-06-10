@@ -2,7 +2,7 @@
 // app/dashboard/classes/classes-client.tsx
 // batch-2c-phase-2-classes-client
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -33,6 +33,12 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
   const [editing, setEditing] = useState<ClassItem | null>(null)
   const [archiving, setArchiving] = useState<ClassItem | null>(null)
   const [loadingArchived, setLoadingArchived] = useState(false)
+
+  // fix-5-prop-sync: router.refresh() re-runs the server component, but
+  // useState locks the first initialClasses — sync on prop change.
+  useEffect(() => {
+    setClasses(initialClasses)
+  }, [initialClasses])
 
   async function reload(includeArchived: boolean) {
     const qs = includeArchived ? '?includeArchived=true' : ''

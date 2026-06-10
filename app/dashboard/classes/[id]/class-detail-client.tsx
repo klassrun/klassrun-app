@@ -3,7 +3,7 @@
 // batch-2c-phase-3a-class-detail-client
 // batch-2c-phase-3b-teacher-display
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -61,6 +61,11 @@ export function ClassDetailClient({
   const [archiving, setArchiving] = useState<Subject | null>(null)
   const [pickingTeacherFor, setPickingTeacherFor] = useState<Subject | null>(null)
   const [loadingArchived, setLoadingArchived] = useState(false)
+
+  // fix-5-prop-sync: keep subjects in step with server-refreshed props.
+  useEffect(() => {
+    setSubjects(initialSubjects)
+  }, [initialSubjects])
 
   async function reload(includeArchived: boolean) {
     const qs = includeArchived ? '?includeArchived=true' : ''

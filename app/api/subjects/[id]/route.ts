@@ -1,5 +1,8 @@
 // app/api/subjects/[id]/route.ts
 // batch-2c-phase-3a-subjects-patch-proxy
+// fix-1-envelope: unwrap apiFetch result; propagate real error status.
+// This route handles teacher assignment (PATCH {teacherId}) — before this
+// fix, a failed assignment returned 200 and showed a success toast.
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthCookie } from '@/lib/auth-cookie'
@@ -15,17 +18,16 @@ export async function PATCH(
   const { id } = await context.params
   const body = await req.json().catch(() => ({}))
 
-  try {
-    const data = await apiFetch<{ subject: unknown }>(`/api/subjects/${id}`, {
-      method: 'PATCH',
-      token,
-      body,
-    })
-    return NextResponse.json(data)
-  } catch (e: any) {
+  const result = await apiFetch<{ subject: unknown }>(
+    `/api/subjects/${encodeURIComponent(id)}`,
+    { method: 'PATCH', token, body },
+  )
+
+  if (!result.ok) {
     return NextResponse.json(
-      { error: { message: e?.message || 'Failed to update subject' } },
-      { status: e?.status || 500 }
+      { error: result.error ?? { message: 'Failed to update subject' } },
+      { status: result.status || 500 },
     )
   }
+  return NextResponse.json(result.data, { status: 200 })
 }
