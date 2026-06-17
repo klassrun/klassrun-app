@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { getAuthCookie } from '@/lib/auth-cookie';
 import BankClient from './_components/bank-client';
+import Link from 'next/link';
 
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
@@ -57,10 +58,16 @@ export default async function QuestionBankPage() {
   ]);
 
   return (
-    <BankClient
-      initialEntries={entries}
-      initialTotal={total}
-      subjects={subjects}
-    />
+    <div className="min-h-screen bg-paper">
+      {/* ops-5e-bank-back */}
+      <div className="mx-auto max-w-5xl px-6 pt-6">
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Back to dashboard</Link>
+      </div>
+      <BankClient
+        initialEntries={entries}
+        initialTotal={total}
+        subjects={subjects}
+      />
+    </div>
   );
 }

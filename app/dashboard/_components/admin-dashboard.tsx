@@ -302,17 +302,6 @@ export function AdminDashboard({
               cta="Invite teachers"
               href="/dashboard/teachers"
             />
-            {/* batch-2c-phase-4b-step-three-dormant */}
-            {/* batch-3-phase-1-step-three-active */}
-            <OnboardingStep
-              number="03"
-              title="Generate your first lesson note"
-              body="Pick a class, subject, and topic. We do the rest — formatted, curriculum-aligned, ready in seconds."
-              cta="Invite teachers to start generating"
-              href="#"
-              accent
-              disabled
-            />
           </div>
 
           <p className="mt-12 max-w-xl text-xs text-muted-foreground">

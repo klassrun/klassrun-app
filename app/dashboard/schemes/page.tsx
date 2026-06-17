@@ -40,6 +40,10 @@ export default async function SchemesPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      {/* ops-5e-schemes-back */}
+      <div className="mb-4">
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Back to dashboard</Link>
+      </div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Schemes of Work</h1>
         <Link

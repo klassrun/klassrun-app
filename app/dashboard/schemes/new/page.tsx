@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import { getAuthCookie } from '@/lib/auth-cookie';
 import { redirect } from 'next/navigation';
 import NewSchemeClient from './new-scheme-client';
+import Link from 'next/link';
 
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
@@ -90,5 +91,13 @@ export default async function NewSchemePage() {
   if (role === 'SCHOOL_ADMIN') redirect('/dashboard/schemes');
 
   const [assignments, session] = await Promise.all([fetchAssignments(), fetchCurrentSession()]);
-  return <NewSchemeClient assignments={assignments} currentSession={session} />;
+  return (
+    <div className="min-h-screen bg-paper">
+      {/* ops-5e-schemes-new-back */}
+      <div className="mx-auto max-w-2xl px-6 pt-6">
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Back to dashboard</Link>
+      </div>
+      <NewSchemeClient assignments={assignments} currentSession={session} />
+    </div>
+  );
 }

@@ -148,10 +148,9 @@ export function TeacherDashboard({
 
           {/* batch-2c-phase-4a-stats-row */}
           <section className="mb-10">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <StatCard label="Subjects assigned" value={String(totalSubjects)} />
               <StatCard label="Classes" value={String(totalClasses)} />
-              <StatCard label="Notes this week" value="—" muted />
             </div>
           </section>
 

@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { getAuthCookie } from '@/lib/auth-cookie';
 import { redirect } from 'next/navigation';
 import NewAssessmentClient from './new-assessment-client';
+import Link from 'next/link';
 
 const API_BASE = process.env.KLASSRUN_API_URL || 'https://klassrun-api.onrender.com';
 
@@ -70,5 +71,13 @@ export default async function NewAssessmentPage() {
 
   const [assignments, session] = await Promise.all([fetchAssignments(), fetchCurrentSession()]);
   // batch-3-phase-3c-page-session-id
-  return <NewAssessmentClient assignments={assignments} currentSession={session} />;
+  return (
+    <div className="min-h-screen bg-paper">
+      {/* ops-5e-assessments-new-back */}
+      <div className="mx-auto max-w-4xl px-6 pt-6">
+        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Back to dashboard</Link>
+      </div>
+      <NewAssessmentClient assignments={assignments} currentSession={session} />
+    </div>
+  );
 }
