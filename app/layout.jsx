@@ -1,5 +1,5 @@
 import './globals.css'
-import { Fraunces, Geist } from 'next/font/google'
+import { Fraunces, Nunito } from 'next/font/google'
 import LoadingSplash from '@/components/LoadingSplash'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
 import { Toaster } from 'sonner'
@@ -25,11 +25,11 @@ const fraunces = Fraunces({
   axes: ['SOFT', 'WONK', 'opsz'],
 })
 
-const geist = Geist({
+const nunito = Nunito({
   subsets: ['latin'],
   variable: '--font-sans',
   display: 'swap',
-})
+}) // ops-5c-nunito
 
 export const viewport = {
   width: 'device-width',
@@ -100,7 +100,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${geist.variable}`}>
+    <html lang="en" className={`${fraunces.variable} ${nunito.variable}`}>
       <body className="antialiased">
         <LoadingSplash />
         <ServiceWorkerRegister />

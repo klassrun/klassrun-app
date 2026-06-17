@@ -30,16 +30,21 @@ export default async function AssessmentDetailPage({ params }: { params: Promise
   if (!assessment) notFound();
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6 flex items-center gap-3">
+    <div className="min-h-screen bg-paper text-foreground">
+      {/* ops-5d-assessments-back */}
+      <header className="border-b border-border bg-card/60">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 sm:px-8">
         <Link
           href="/dashboard/assessments"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           ← Exam questions
         </Link>
+        </div>
+      </header>
+      <div className="mx-auto max-w-4xl px-6 py-12 sm:px-8 lg:py-16">
+        <AssessmentRender assessment={assessment} />
       </div>
-      <AssessmentRender assessment={assessment} />
     </div>
   );
 }

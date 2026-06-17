@@ -76,3 +76,41 @@ export async function clearRoleCookie() {
   const store = await cookies()
   store.delete(ROLE_COOKIE_NAME)
 }
+
+// ── Operations 5c — portal cookie ──────────────────────────────────────────
+// ops-5c-portal-cookie
+// Separate httpOnly cookie for the parent/student portal. NEVER shared with the
+// staff auth cookie — the two sessions are fully isolated.
+export const PORTAL_COOKIE_NAME = 'klassrun_portal'
+
+export async function setPortalCookie(token: string, maxAgeSeconds = ONE_WEEK) {
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: PORTAL_COOKIE_NAME,
+    value: token,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: maxAgeSeconds,
+  })
+}
+
+export async function getPortalCookie(): Promise<string | null> {
+  const cookieStore = await cookies()
+  return cookieStore.get(PORTAL_COOKIE_NAME)?.value ?? null
+}
+
+export async function clearPortalCookie() {
+  const cookieStore = await cookies()
+  cookieStore.set({
+    name: PORTAL_COOKIE_NAME,
+    value: '',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+  })
+}
+

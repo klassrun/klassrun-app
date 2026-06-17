@@ -6,13 +6,31 @@
 
 // batch-2c-phase-4b-hotfix-proxy-export
 import { NextResponse, type NextRequest } from 'next/server'
-import { AUTH_COOKIE_NAME, ROLE_COOKIE_NAME } from '@/lib/auth-cookie'
+import { AUTH_COOKIE_NAME, ROLE_COOKIE_NAME, PORTAL_COOKIE_NAME } from '@/lib/auth-cookie'
 
 const PROTECTED_PREFIXES = ['/dashboard', '/admin']
 const AUTH_PAGES         = ['/login', '/signup']
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // ops-5c-portal-gate — portal is its own world (separate cookie); it never
+  // touches the staff /dashboard or /admin logic below, and staff cookies grant
+  // no portal access.
+  if (pathname.startsWith('/portal/')) {
+    const seg = pathname.split('/')        // ['', 'portal', slug, section, ...]
+    const slug = seg[2] || ''
+    const isPublic = seg[3] === 'login' || seg[3] === 'accept'
+    const hasPortal = !!request.cookies.get(PORTAL_COOKIE_NAME)?.value
+    if (slug && !isPublic && !hasPortal) {
+      const url = request.nextUrl.clone()
+      url.pathname = `/portal/${slug}/login`
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+    return NextResponse.next()
+  }
+
   const hasToken = !!request.cookies.get(AUTH_COOKIE_NAME)?.value
 
   // Unauthenticated user trying to reach a protected page → /login
@@ -112,5 +130,6 @@ export const config = {
     '/admin/:path*',
     '/login',
     '/signup',
+    '/portal/:path*',
   ],
 }
