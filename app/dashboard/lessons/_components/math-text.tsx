@@ -8,6 +8,7 @@
 // the whole document.
 
 import katex from 'katex'
+import 'katex/contrib/mhchem' // render-1-mhchem
 
 type Part = { type: 'text' | 'inline' | 'block'; value: string }
 
@@ -25,6 +26,7 @@ export function MathText({ text }: { text: string | null | undefined }) {
           <span
             key={i}
             className={p.type === 'block' ? 'katex-block-wrap' : ''}
+            style={p.type === 'block' ? { display: 'block', overflowX: 'auto', maxWidth: '100%' } : undefined} /* render-1-blockwrap */
             dangerouslySetInnerHTML={{ __html: html }}
           />
         )
