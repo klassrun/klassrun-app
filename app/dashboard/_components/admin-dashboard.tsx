@@ -241,6 +241,17 @@ export function AdminDashboard({
                 </Link>
               </div>
 
+              {/* gate2-admin-billing-nav */}
+              <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Billing
+              </p>
+              <div className="space-y-3 pl-1">
+                <Link href="/dashboard/billing" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
+                  Subscribe
+                  <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+              </div>
+
               <div className="border-t" />
 
               <Link
