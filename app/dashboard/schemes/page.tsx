@@ -47,6 +47,13 @@ export default async function SchemesPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Schemes of Work</h1>
         <Link
+          href="/dashboard/schemes/upload"
+          className="inline-flex items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-accent mr-2"
+        >
+          Upload scheme
+        </Link>
+        {/* batch-4b-list-upload */}
+        <Link
           href="/dashboard/schemes/new"
           className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
         >
@@ -72,6 +79,9 @@ export default async function SchemesPage() {
             <li key={s.id} className="rounded-lg border p-4 hover:bg-accent/40 transition">
               <Link href={`/dashboard/schemes/${s.id}`} className="block">
                 <div className="font-medium">{s.title}</div>
+                {s.origin === 'uploaded' ? (
+                  <span className="inline-block mt-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">Uploaded</span>
+                ) : null}
                 <div className="text-sm text-muted-foreground">
                   {s.class?.name} · {s.subject?.name} · {s.sessionStamp}
                 </div>

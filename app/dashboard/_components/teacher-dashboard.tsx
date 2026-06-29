@@ -228,6 +228,17 @@ export function TeacherDashboard({
                   <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
                 </div>
               </Link>
+      {/* batch-4b-dash-upload */}
+      <Link href="/dashboard/schemes/upload" className="rounded-xl border bg-card p-6 hover:bg-muted/40 transition-colors">
+        <div className="flex items-start gap-4">
+          <span className="editorial-number text-3xl text-primary">02b</span>
+          <div className="flex-1">
+            <h3 className="font-display text-lg font-medium leading-tight tracking-tight">Upload your Scheme of Work</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Already have a scheme from the ministry? Upload it and generate lesson notes aligned to it.</p>
+          </div>
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
+        </div>
+      </Link>
               {/* batch-3-phase-3a-teacher-exams-card */}
               <Link href="/dashboard/assessments/new" className="rounded-xl border bg-card p-6 hover:bg-muted/40 transition-colors">
                 <div className="flex items-start gap-4">

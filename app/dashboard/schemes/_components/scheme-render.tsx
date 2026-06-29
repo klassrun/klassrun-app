@@ -4,6 +4,8 @@
 'use client';
 
 import { MathText } from '../../lessons/_components/math-text';
+import { AlignedNoteButton } from './aligned-note-button'; // batch-4b-render-uploaded
+import { SchemeEditWeeks } from './scheme-edit-weeks';
 
 type Week = {
   weekNumber: number;
@@ -42,6 +44,10 @@ type Props = {
 export function SchemeRender({ scheme }: Props) {
   const c = scheme.content || ({} as SchemeContent);
   const weeks: Week[] = Array.isArray(c.weeks) ? c.weeks : [];
+  // batch-4b-render-uploaded
+  const meta: any = (c as any)._metadata || {};
+  const uploaded = meta.origin === 'uploaded' || (scheme as any).origin === 'uploaded';
+  const parseStatus = meta.parseStatus || (scheme as any).parseStatus || null;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -53,6 +59,17 @@ export function SchemeRender({ scheme }: Props) {
           {scheme.sessionStamp ? ` · ${scheme.sessionStamp}` : ''}
         </p>
         {scheme.isEdited ? <p className="text-xs text-muted-foreground mt-1">Edited</p> : null}
+        {uploaded ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">Uploaded</span>
+            {parseStatus === 'failed' ? (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-700">Needs review</span>
+            ) : null}
+            {(scheme as any).sourceFileUrl ? (
+              <a href={(scheme as any).sourceFileUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground underline hover:text-foreground">Original file</a>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       {c.overview ? (
@@ -75,6 +92,9 @@ export function SchemeRender({ scheme }: Props) {
               <h3 className="text-base font-medium mb-2">
                 <MathText text={w.topic} />
               </h3>
+              {uploaded ? (
+                <AlignedNoteButton schemeId={scheme.id} week={w.weekNumber} topic={w.topic} />
+              ) : null}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -112,6 +132,10 @@ export function SchemeRender({ scheme }: Props) {
           ))}
         </div>
       </section>
+
+      {uploaded ? (
+        <SchemeEditWeeks schemeId={scheme.id} content={c as any} />
+      ) : null}
 
       <footer className="mt-8 flex items-center gap-3 border-t pt-4">
         <button
