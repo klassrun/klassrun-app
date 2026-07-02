@@ -137,16 +137,7 @@ export function SchemeRender({ scheme }: Props) {
         <SchemeEditWeeks schemeId={scheme.id} content={c as any} />
       ) : null}
 
-      <footer className="mt-8 flex items-center gap-3 border-t pt-4">
-        <button
-          type="button"
-          disabled
-          className="rounded-md border px-3 py-1.5 text-sm text-muted-foreground"
-          title="Available in a future update"
-        >
-          Export PDF (coming soon)
-        </button>
-      </footer>
+      {/* batch-5-print-export: export lives in the page header */}
     </div>
   );
 }

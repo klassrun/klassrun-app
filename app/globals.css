@@ -196,3 +196,32 @@
         animation: fade-up 0.6s ease-out forwards;
     }
 }
+
+/* batch-5-print-export — print/export rules */
+.kr-print-footer { display: none; }
+@media print {
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Student copy (exams): hide answer ticks, highlights, marking guides */
+  body.kr-student-copy details { display: none !important; }
+  body.kr-student-copy [class*="bg-primary/10"] {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: 400 !important;
+  }
+  body.kr-student-copy [class*="bg-primary/10"] span.ml-auto { display: none !important; }
+  /* Let block math flow onto paper instead of clipping in a scroll box */
+  .katex-block-wrap { overflow-x: visible !important; }
+  .kr-print-footer {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-size: 8pt;
+    color: #6b7280;
+  }
+}
