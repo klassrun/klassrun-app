@@ -56,6 +56,19 @@ async function getSchool(token: string): Promise<SchoolMeResponse | null> {
   return result.data ?? null
 }
 
+// batch-6-usage-fetch
+type UsageResponse = {
+  allTime: { notes: number; schemes: number; uploadedSchemes: number; exams: number }
+  thisTerm: { notes: number; schemes: number; exams: number }
+  hoursSaved: { allTime: number; thisTerm: number }
+  teacherCount: number
+  currentSession: { name: string; term: string } | null
+}
+async function getUsage(token: string): Promise<UsageResponse | null> {
+  const result = await apiFetch<UsageResponse>('/api/analytics/usage', { token })
+  return result.data ?? null
+}
+
 export default async function DashboardPage() {
   const token = await getAuthCookie()
   if (!token) redirect('/login')
@@ -97,11 +110,13 @@ export default async function DashboardPage() {
   }
 
   // SCHOOL_ADMIN (and fallthrough)
+  const usage = await getUsage(token) // batch-6-usage-fetch-call
   return (
     <AdminDashboard
       me={user}
       school={schoolData?.school ?? null}
       teacherCount={schoolData?.teacherCount ?? 0}
+      usage={usage}
     />
   )
 }

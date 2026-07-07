@@ -5,6 +5,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { UsageStrip, type UsageData } from './usage-strip' // batch-6-usage-strip-wire
 
 type SchoolWithCounts = {
   id: string
@@ -39,10 +40,12 @@ export function AdminDashboard({
   me,
   school,
   teacherCount,
+  usage,
 }: {
   me: Me
   school: SchoolWithCounts | null
   teacherCount: number
+  usage: UsageData
 }) {
   const schoolName = me.school?.name ?? school?.name ?? 'Your school'
   const session    = me.school?.currentSession ?? school?.sessions?.[0] ?? null
@@ -283,19 +286,8 @@ export function AdminDashboard({
             </p>
           </div>
 
-          {/* Stats strip — one stat: teacher count */}
-          <div className="mb-10 flex items-baseline gap-3">
-            <span className="font-display text-4xl font-medium text-primary">
-              {teacherCount}
-            </span>
-            <span className="text-sm text-muted-foreground">
-              {teacherCount === 0
-                ? 'teachers — invite your first below'
-                : teacherCount === 1
-                ? 'teacher on board'
-                : 'teachers on board'}
-            </span>
-          </div>
+          {/* batch-6-usage-strip-wire */}
+          <UsageStrip usage={usage} teacherCount={teacherCount} showSubscribe={status !== 'ACTIVE'} />
 
           {/* Onboarding checklist */}
           <div className="space-y-px overflow-hidden rounded-xl border bg-card">

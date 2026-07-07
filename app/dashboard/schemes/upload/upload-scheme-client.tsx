@@ -201,6 +201,17 @@ export default function UploadSchemeClient({ assignments: initialAssignments, cu
           )}
         </div>
 
+        {/* batch-6-template-links */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span>Not sure of the format?</span>
+          <a href="/templates/klassrun-scheme-template-blank.docx" download className="font-medium text-primary hover:underline">
+            Download blank template
+          </a>
+          <a href="/templates/klassrun-scheme-template-filled.docx" download className="font-medium text-primary hover:underline">
+            See a filled example
+          </a>
+        </div>
+
         {error && (
           <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
             {error}
