@@ -202,9 +202,7 @@ export function TeacherDashboard({
 
           {/* batch-2c-phase-4a-coming-soon */}
           <section>
-            <h2 className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Coming soon
-            </h2>
+            {/* batch-6-coming-soon-cleanup */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Link href="/dashboard/lessons/new" className="rounded-xl border bg-card p-6 hover:bg-muted/40 transition-colors">
               {/* batch-3-phase-1-lessons-cta */}
@@ -214,7 +212,6 @@ export function TeacherDashboard({
                   <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Lesson Notes</h3>
                   <p className="mt-1 text-sm text-muted-foreground">Generate curriculum-aligned lesson notes for any class and topic, in seconds.</p>
                 </div>
-                <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
               </div>
             </Link>
               {/* hotfix-batch-3-phase-2-teacher-schemes-card */}
@@ -225,7 +222,6 @@ export function TeacherDashboard({
                     <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Schemes of Work</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Generate a 12-week scheme of work for any class and subject, ready to edit and share.</p>
                   </div>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
                 </div>
               </Link>
       {/* batch-4b-dash-upload */}
@@ -236,7 +232,6 @@ export function TeacherDashboard({
             <h3 className="font-display text-lg font-medium leading-tight tracking-tight">Upload your Scheme of Work</h3>
             <p className="mt-1 text-sm text-muted-foreground">Already have a scheme from the ministry? Upload it and generate lesson notes aligned to it.</p>
           </div>
-          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
         </div>
       </Link>
               {/* batch-3-phase-3a-teacher-exams-card */}
@@ -247,7 +242,6 @@ export function TeacherDashboard({
                     <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Exam Questions</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Generate WAEC/NECO-style questions for any topic. Objective, theory, or essay.</p>
                   </div>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">New</span>
                 </div>
               </Link>
 
