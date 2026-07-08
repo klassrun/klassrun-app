@@ -27,10 +27,37 @@ async function getCurrentUser() {
   return result.data?.user ?? null
 }
 
+// superadmin-mvp-console — platform metrics for the console band
+type AdminMetrics = {
+  schools: { total: number; provisioning: number; active: number; suspended: number; expired: number }
+  subscriptions: { trial: number; active: number; pastDue: number; cancelled: number; expired: number }
+  content: { notes: number; schemes: number; exams: number }
+  teachers: number
+}
+
+async function getMetrics(): Promise<AdminMetrics | null> {
+  const token = await getAuthCookie()
+  if (!token) return null
+  const result = await apiFetch<AdminMetrics>('/api/admin/metrics', { token })
+  return result.data ?? null
+}
+
+function MetricTile({ label, value, hint }: { label: string; value: number; hint?: string }) {
+  return (
+    <div className="bg-foreground p-5 sm:p-6">
+      <p className="editorial-number text-3xl text-primary sm:text-4xl">{value.toLocaleString()}</p>
+      <p className="mt-2 text-sm font-medium text-background">{label}</p>
+      {hint ? <p className="mt-0.5 text-xs text-background/50">{hint}</p> : null}
+    </div>
+  )
+}
+
 export default async function AdminPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
   if (user.role !== 'SUPER_ADMIN') redirect('/dashboard')
+
+  const metrics = await getMetrics()
 
   return (
     <div className="min-h-screen bg-foreground text-background">
@@ -104,6 +131,28 @@ export default async function AdminPage() {
         </div>
       </section>
 
+      {/* superadmin-mvp — platform metrics band */}
+      <section id="platform-metrics" className="border-b border-background/10">
+        <div className="mx-auto max-w-6xl px-6 py-12 sm:px-10 sm:py-14">
+          <p className="mb-8 text-xs font-medium uppercase tracking-[0.18em] text-background/50">
+            Platform at a glance
+          </p>
+          {metrics ? (
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-background/15 bg-background/5 sm:grid-cols-4">
+              <MetricTile label="Schools" value={metrics.schools.total} hint={`${metrics.schools.active} active`} />
+              <MetricTile label="On trial" value={metrics.subscriptions.trial} hint={`${metrics.subscriptions.active} paid`} />
+              <MetricTile label="Suspended" value={metrics.schools.suspended} hint={`${metrics.schools.provisioning} setting up`} />
+              <MetricTile label="Teachers" value={metrics.teachers} hint="all schools" />
+              <MetricTile label="Lesson notes" value={metrics.content.notes} />
+              <MetricTile label="Schemes" value={metrics.content.schemes} />
+              <MetricTile label="Exams" value={metrics.content.exams} />
+              <MetricTile label="Paid plans" value={metrics.subscriptions.active} hint="active subs" />
+            </div>
+          ) : (
+            <p className="text-sm text-background/50">Metrics unavailable right now.</p>
+          )}
+        </div>
+      </section>
       {/* ── Tools grid ───────────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-6 py-16 sm:px-10 sm:py-20">
         <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-background/50">
@@ -119,7 +168,6 @@ export default async function AdminPage() {
             title="All schools"
             description="View, suspend, or verify schools across the platform."
             href="/admin/schools"
-            comingSoon
           />
           <AdminCard
             number="02"
@@ -139,8 +187,7 @@ export default async function AdminPage() {
             number="04"
             title="Platform metrics"
             description="Active schools, lesson notes generated, exam questions delivered."
-            href="/admin/metrics"
-            comingSoon
+            href="#platform-metrics"
           />
           <AdminCard
             number="05"
