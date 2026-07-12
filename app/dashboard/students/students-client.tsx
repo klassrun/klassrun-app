@@ -374,7 +374,7 @@ function StudentFormDialog({
             </div>
             <div>
               <label className="block text-xs font-medium">Date of birth</label>
-              <input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} className={inputClass} />
+              <input type="date" value={dateOfBirth} min={new Date(Date.now() - 30 * 365.25 * 86400000).toISOString().slice(0, 10)} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setDateOfBirth(e.target.value)} className={inputClass} /> {/* bugfix-age-dob-v1 */}
             </div>
           </div>
 
