@@ -15,6 +15,7 @@ export type ApiResponse<T = unknown> = {
   status: number
   data: T | null
   error: { message: string; field?: string } | null
+  raw?: unknown // bugfix-dedup-copy-v1: parsed API payload, passed through for rich errors
 }
 
 export async function apiFetch<T = unknown>(
@@ -69,6 +70,7 @@ export async function apiFetch<T = unknown>(
       ok: false,
       status: res.status,
       data: null,
+      raw: payload, // bugfix-dedup-copy-v1
       error: {
         message: errPayload?.message || `Request failed (${res.status})`,
         field: errPayload?.field,

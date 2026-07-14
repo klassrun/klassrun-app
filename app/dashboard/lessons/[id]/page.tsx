@@ -8,6 +8,7 @@ import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
 // batch-3-phase-1-5-detail-import
 import { LessonNoteRender } from '../_components/lesson-note-render'
+import { CopyNoteButton } from '../_components/copy-note-button' // bugfix-dedup-copy-v1
 import { ExportButton, PrintHeader } from '../../_components/print-export'
 
 // batch-3-phase-1-5-force-dynamic
@@ -21,7 +22,7 @@ type Note = {
   createdAt: string
   teacher: { firstName: string; lastName: string; email: string } | null
   subject: { name: string } | null
-  class:   { name: string; level: string | null } | null
+  class:   { id: string; name: string; level: string | null } | null // bugfix-dedup-copy-v1
 }
 
 type MeSchool = { name: string; logoUrl: string | null } | null
@@ -35,13 +36,25 @@ export default async function LessonDetailPage({
   if (!token) redirect('/login')
 
   const { id } = await params
-  const [result, meResult] = await Promise.all([
+  // bugfix-dedup-copy-v1: also load the teacher's assignments so the note
+  // can be copied to other arms of the same subject (non-teachers get !ok -> no button).
+  const [result, meResult, assignResult] = await Promise.all([
     apiFetch<{ note: Note }>(`/api/notes/${id}`, { token }),
     apiFetch<{ user: { school: MeSchool } }>('/api/auth/me', { token }),
+    apiFetch<{ assignments: Array<{ class: { id: string; name: string }; subjects: Array<{ id: string; name: string; archivedAt: string | null }> }> }>('/api/teachers/me/assignments', { token }),
   ])
   if (!result.ok || !result.data?.note) notFound()
   const note = result.data.note
   const school = (meResult.ok && meResult.data?.user?.school) || null
+
+  // bugfix-dedup-copy-v1: arms where this teacher teaches the same-named subject
+  const subjectName = note.subject?.name ?? ''
+  const copyTargets = (assignResult.ok && assignResult.data ? assignResult.data.assignments : [])
+    .filter((a) =>
+      a.class.id !== (note.class?.id ?? '') &&
+      a.subjects.some((s) => !s.archivedAt && s.name.toLowerCase() === subjectName.toLowerCase()),
+    )
+    .map((a) => ({ classId: a.class.id, className: a.class.name }))
 
   const printTitle = String((note.content as Record<string, unknown>)?.title ?? note.topic ?? 'Lesson note')
   const printSubtitle = [note.subject?.name, note.class?.name, note.sessionStamp]
@@ -58,7 +71,12 @@ export default async function LessonDetailPage({
           >
             ← Back to lesson notes
           </Link>
-          <ExportButton filename={`${printTitle} - Lesson Note`} />
+          <div className="flex items-center gap-2">
+            {copyTargets.length > 0 && subjectName && (
+              <CopyNoteButton noteId={note.id} subjectName={subjectName} targets={copyTargets} />
+            )}
+            <ExportButton filename={`${printTitle} - Lesson Note`} />
+          </div>
         </div>
       </header>
       <div className="mx-auto max-w-4xl px-6 py-12 sm:px-8 lg:py-16 print:py-0">

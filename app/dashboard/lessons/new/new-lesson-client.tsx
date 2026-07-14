@@ -39,6 +39,8 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
   const [stage, setStage] = useState<Stage>('SELECTING')
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<LessonNote | null>(null)
+  // bugfix-dedup-copy-v1
+  const [duplicate, setDuplicate] = useState<{ id: string; topic: string; createdAt: string } | null>(null)
 
   const subjects = useMemo(() => {
     const a = assignments.find((x) => x.class.id === classId)
@@ -75,6 +77,7 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
 
   async function generate() {
     setError(null)
+    setDuplicate(null) // bugfix-dedup-copy-v1
     const trimmed = topic.trim()
     if (trimmed.length < 3) {
       setError('Topic must be at least 3 characters')
@@ -115,6 +118,12 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
 
     if (!res.ok) {
       const data = await res.json().catch(() => null)
+      // bugfix-dedup-copy-v1: duplicate guard fired on the API
+      if (res.status === 409 && data?.error?.code === 'DUPLICATE_NOTE' && data?.existingNote) {
+        setDuplicate(data.existingNote)
+        setStage('SELECTING')
+        return
+      }
       const msg = data?.error?.message || 'Could not generate lesson note'
       setError(msg)
       setStage('SELECTING')
@@ -129,6 +138,20 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
     }
     setNote(data.note)
     setStage('REVIEWING')
+  }
+
+  // bugfix-dedup-copy-v1
+  async function deleteAndRegenerate() {
+    if (!duplicate) return
+    const res = await fetch(`/api/notes/${duplicate.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json().catch(() => null)
+      setDuplicate(null)
+      setError(body?.error?.message || 'Could not delete the existing note')
+      return
+    }
+    setDuplicate(null)
+    generate()
   }
 
   async function discard() {
@@ -276,6 +299,40 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
                 Leave blank to let the AI decide the structure.
               </p>
             </div>
+
+            {/* bugfix-dedup-copy-v1: duplicate-note resolution card */}
+            {duplicate && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-medium">This note already exists</p>
+                <p className="mt-1">
+                  &quot;{duplicate.topic}&quot; was created for this class, subject and term on{' '}
+                  {new Date(duplicate.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' })}.
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/dashboard/lessons/${duplicate.id}`)}
+                    className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Open existing
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deleteAndRegenerate}
+                    className="rounded-md border border-amber-400 bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    Delete old &amp; regenerate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDuplicate(null)}
+                    className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

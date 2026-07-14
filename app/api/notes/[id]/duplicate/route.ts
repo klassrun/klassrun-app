@@ -1,26 +1,28 @@
-// app/api/notes/generate/route.ts
-// batch-3-phase-1-notes-generate-proxy
+// app/api/notes/[id]/duplicate/route.ts
+// bugfix-dedup-copy-v1 — proxy for copy-to-class (zero AI cost on the API)
 
 import { NextResponse } from 'next/server'
 import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
 
-export async function POST(request: Request) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const token = await getAuthCookie()
   if (!token) {
     return NextResponse.json({ error: { message: 'Not authenticated' } }, { status: 401 })
   }
+  const { id } = await params
   const body = await request.json().catch(() => null)
-  const result = await apiFetch('/api/notes/generate', {
+  const result = await apiFetch(`/api/notes/${encodeURIComponent(id)}/duplicate`, {
     method: 'POST',
     body,
     token,
   })
   if (!result.ok) {
-    // bugfix-dedup-copy-v1: pass the raw API body through so rich error
-    // payloads (error.code, existingNote on 409) reach the client.
     return NextResponse.json(
-      result.raw ?? { error: result.error ?? { message: 'Could not generate lesson note' } },
+      result.raw ?? { error: result.error ?? { message: 'Could not copy lesson note' } },
       { status: result.status || 500 },
     )
   }
