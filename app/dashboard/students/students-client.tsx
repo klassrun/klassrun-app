@@ -288,13 +288,13 @@ function StudentFormDialog({
 
   async function submit() {
     setError(null)
-    if (!admissionNumber.trim()) { setError('Admission number is required'); return }
+    if (mode === 'edit' && !admissionNumber.trim()) { setError('Admission number is required'); return } // fix3-admission-v1
     if (!firstName.trim()) { setError('First name is required'); return }
     if (!lastName.trim()) { setError('Last name is required'); return }
     if (!classId) { setError('Please choose a class'); return }
 
     const payload = {
-      admissionNumber: admissionNumber.trim(),
+      ...(admissionNumber.trim() ? { admissionNumber: admissionNumber.trim() } : {}), // fix3-admission-v1: blank on create -> server auto-generates
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       middleName: middleName.trim() || null,
@@ -337,8 +337,8 @@ function StudentFormDialog({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium">Admission number <span className="text-red-500">*</span></label>
-              <input type="text" value={admissionNumber} maxLength={40} onChange={(e) => setAdmissionNumber(e.target.value)} className={inputClass + ' font-mono'} placeholder="e.g. KR/2026/001" />
+              <label className="block text-xs font-medium">Admission number {mode === 'edit' ? <span className="text-red-500">*</span> : <span className="font-normal text-muted-foreground">(leave blank to auto-generate)</span>}</label> {/* fix3-admission-v1 */}
+              <input type="text" value={admissionNumber} maxLength={40} onChange={(e) => setAdmissionNumber(e.target.value)} className={inputClass + ' font-mono'} placeholder={mode === 'edit' ? 'e.g. GIC/2026/001' : 'Auto-generated if left blank'} />
             </div>
             <div>
               <label className="block text-xs font-medium">Class <span className="text-red-500">*</span></label>

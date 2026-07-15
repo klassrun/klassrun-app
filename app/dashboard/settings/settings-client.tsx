@@ -22,6 +22,7 @@ type School = {
   contactEmail: string | null
   motto: string | null
   rcNumber: string | null
+  admissionPrefix?: string | null // fix3-admission-v1
   logoUrl: string | null
   createdAt: string
 }
@@ -38,6 +39,7 @@ export function SettingsClient({ school }: { school: School }) {
   const [contactEmail, setContactEmail] = useState(school.contactEmail ?? '')
   const [motto, setMotto]               = useState(school.motto ?? '')
   const [rcNumber, setRcNumber]         = useState(school.rcNumber ?? '')
+  const [admissionPrefix, setAdmissionPrefix] = useState(school.admissionPrefix ?? '') // fix3-admission-v1
 
   const [submitting, setSubmitting] = useState(false)
 
@@ -56,6 +58,7 @@ export function SettingsClient({ school }: { school: School }) {
           contactEmail: contactEmail.trim() || null,
           motto: motto.trim() || null,
           rcNumber: rcNumber.trim() || null,
+          admissionPrefix: admissionPrefix.trim() || null, // fix3-admission-v1
         }),
       })
       const data = await res.json()
@@ -200,6 +203,20 @@ export function SettingsClient({ school }: { school: School }) {
                 type="text" value={rcNumber}
                 onChange={(e) => setRcNumber(e.target.value)}
                 className={inputClass + ' font-mono text-sm'}
+              />
+            </Field>
+
+            {/* fix3-admission-v1 */}
+            <Field
+              label="Admission number prefix"
+              hint="2-6 letters/digits, e.g. GIC. Used when auto-generating admission numbers (GIC/2026/001). Leave blank to use your school's initials."
+            >
+              <input
+                type="text" value={admissionPrefix}
+                maxLength={6}
+                onChange={(e) => setAdmissionPrefix(e.target.value.toUpperCase())}
+                className={inputClass + ' font-mono text-sm'}
+                placeholder="GIC"
               />
             </Field>
           </Section>
