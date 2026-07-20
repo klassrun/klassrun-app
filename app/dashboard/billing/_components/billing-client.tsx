@@ -1,5 +1,5 @@
 // app/dashboard/billing/_components/billing-client.tsx
-// gate2-billing-client
+// gate2-billing-client + pay2-hardening-v1
 'use client'
 
 import { useState } from 'react'
@@ -15,10 +15,14 @@ export function BillingClient({
   prices,
   currentPlan,
   status,
+  expired = false,
+  periodLabel = 'month',
 }: {
   prices: Record<string, number>
   currentPlan: string | null
   status: string | null
+  expired?: boolean
+  periodLabel?: string
 }) {
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -52,9 +56,12 @@ export function BillingClient({
           ← Back to dashboard
         </a>
         <h1 className="mt-4 font-display text-3xl font-medium tracking-tight">Subscribe</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Choose a plan for your school. Billed per term.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Choose a plan for your school. Billed per {periodLabel}.</p>
         {status === 'TRIAL' && (
           <p className="mt-1 text-sm text-muted-foreground">You're currently on a free trial.</p>
+        )}
+        {expired && (
+          <p className="mt-1 text-sm text-muted-foreground">Your last paid {periodLabel} has ended. Renew below to continue.</p>
         )}
 
         {error && (
@@ -65,14 +72,14 @@ export function BillingClient({
 
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-3">
           {PLAN_ORDER.map((plan) => {
-            const isCurrent = currentPlan === plan && status === 'ACTIVE'
+            const isCurrent = currentPlan === plan && status === 'ACTIVE' && !expired // pay2-hardening-v1
             return (
               <div key={plan} className="flex flex-col rounded-2xl border border-border bg-card p-6">
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   {PLAN_LABELS[plan]}
                 </p>
                 <p className="mt-3 font-display text-3xl font-medium">{naira(prices[plan] ?? 0)}</p>
-                <p className="text-xs text-muted-foreground">per term</p>
+                <p className="text-xs text-muted-foreground">per {periodLabel}</p>
                 <div className="mt-6 flex-1" />
                 {isCurrent ? (
                   <span className="rounded-lg border border-border bg-muted px-4 py-2 text-center text-sm font-medium text-muted-foreground">
