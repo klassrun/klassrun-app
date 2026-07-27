@@ -12,6 +12,7 @@ import { apiFetch } from '@/lib/api'
 import { AdminDashboard } from './_components/admin-dashboard'
 import { TeacherDashboard } from './_components/teacher-dashboard'
 import { BursarDashboard } from './_components/bursar-dashboard'
+import { SubscriptionBanner } from './_components/subscription-banner' // b2-banner-import
 
 type MeResponse = {
   user: {
@@ -28,6 +29,9 @@ type MeResponse = {
       logoUrl: string | null
       portalUrl: string
       currentSession: { name: string; currentTerm: string } | null
+      // b2-me-subscription: the API /me already includes this (the billing
+      // page reads the same field); the type just never declared it.
+      subscription: { plan: string; status: string; endDate?: string | null; trialEndsAt?: string | null } | null
     } | null
   }
 }
@@ -111,12 +115,20 @@ export default async function DashboardPage() {
 
   // SCHOOL_ADMIN (and fallthrough)
   const usage = await getUsage(token) // batch-6-usage-fetch-call
+  // b2-banner-render: reflect (never enforce) the subscription state above
+  // the admin dashboard. Healthy active/trial render nothing.
   return (
-    <AdminDashboard
-      me={user}
-      school={schoolData?.school ?? null}
-      teacherCount={schoolData?.teacherCount ?? 0}
-      usage={usage}
-    />
+    <>
+      <SubscriptionBanner
+        subscription={user.school?.subscription ?? null}
+        schoolStatus={user.school?.status ?? null}
+      />
+      <AdminDashboard
+        me={user}
+        school={schoolData?.school ?? null}
+        teacherCount={schoolData?.teacherCount ?? 0}
+        usage={usage}
+      />
+    </>
   )
 }
