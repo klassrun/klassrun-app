@@ -203,6 +203,13 @@ export default async function AdminPage() {
             href="/admin/team"
             comingSoon
           />
+          {/* b2b-payments-v1 - billing ledger */}
+          <AdminCard
+            number="07"
+            title="Payments"
+            description="Every activation booked to the billing ledger: webhook, verify, or manual."
+            href="/admin/payments"
+          />
         </div>
 
         {/* Footer note */}
