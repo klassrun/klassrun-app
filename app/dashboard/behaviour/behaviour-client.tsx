@@ -14,7 +14,9 @@ type ClassItem = { id: string; name: string; archivedAt: string | null }
 type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean }
 type Ratings = Record<string, number>
 type GridRow = {
-  student: { id: string; admissionNumber: string; firstName: string; lastName: string; middleName: string | null }
+  // app-roster-states-v1: archivedAt arrives from the B2 roster. A student who has left
+  // is still part of the session's record (spec 2.2) - shown, not hidden.
+  student: { id: string; admissionNumber: string; firstName: string; lastName: string; middleName: string | null; archivedAt?: string | null }
   ratings: Ratings
   hasEntry: boolean
 }
@@ -116,7 +118,19 @@ export function BehaviourClient({ classes, sessions }: { classes: ClassItem[]; s
         <section className="mt-8">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{className} · {TERMS.find((t) => t.value === term)?.label}</h2>
           {rows.length === 0 ? (
-            <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">No active students in this class. Add students on the <Link href="/dashboard/students" className="font-medium underline">Students</Link> page first.</div>
+            <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+              {/* app-roster-states-v1: an empty PAST session is correct, not broken. Saying
+                  "add students first" there sends the admin to add people who
+                  already exist. */}
+              {sessions.find((s) => s.id === sessionId)?.isCurrent === false ? (
+                <>
+                  <p className="font-medium text-foreground">Nobody was enrolled in this class for this session.</p>
+                  <p className="mx-auto mt-2 max-w-md">A student&apos;s class is recorded per session, so an earlier session shows only the students who were enrolled at the time. Nothing has been lost &mdash; switch to the current session for today&apos;s roster.</p>
+                </>
+              ) : (
+                <>No students in this class yet. Add students on the <Link href="/dashboard/students" className="font-medium underline">Students</Link> page first.</>
+              )}
+            </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border bg-card">
               <table className="w-full text-sm" style={{ minWidth: `${320 + attributes.length * 84}px` }}>
@@ -127,8 +141,8 @@ export function BehaviourClient({ classes, sessions }: { classes: ClassItem[]; s
                 </tr></thead>
                 <tbody className="divide-y">
                   {rows.map((r) => (
-                    <tr key={r.student.id} className="hover:bg-muted/20">
-                      <td className="sticky left-0 z-10 bg-card px-4 py-2.5"><p className="font-medium leading-tight">{r.student.lastName} {r.student.firstName}</p><p className="font-mono text-[11px] text-muted-foreground">{r.student.admissionNumber}</p></td>
+                    <tr key={r.student.id} className={r.student.archivedAt ? 'opacity-60 hover:bg-muted/20' : 'hover:bg-muted/20'}> {/* app-roster-states-v1 */}
+                      <td className="sticky left-0 z-10 bg-card px-4 py-2.5"><p className="font-medium leading-tight">{r.student.lastName} {r.student.firstName}{r.student.archivedAt ? <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground align-middle">Left</span> : null}</p><p className="font-mono text-[11px] text-muted-foreground">{r.student.admissionNumber}</p></td>
                       {attributes.map((a) => (
                         <td key={a} className="px-1.5 py-2.5 text-center">
                           <select value={r.ratings[a] ?? ''} onChange={(e) => setRating(r.student.id, a, e.target.value)} className="w-14 rounded-md border border-border bg-background px-1 py-1 text-center text-sm">

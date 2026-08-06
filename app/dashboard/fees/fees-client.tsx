@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 
 type ClassOpt = { id: string; name: string }
 type SessionOpt = { id: string; name: string; currentTerm: string; isCurrent: boolean }
-type Row = { id: string; admissionNumber: string; firstName: string; lastName: string; status: 'PAID' | 'UNPAID' }
+type Row = { id: string; admissionNumber: string; firstName: string; lastName: string; status: 'PAID' | 'UNPAID'; archivedAt?: string | null } // app-roster-states-v1
 type Summary = { total: number; paid: number; unpaid: number; percentPaid: number }
 
 const TERMS = [
@@ -174,13 +174,20 @@ export function FeesClient({ classes, sessions }: { classes: ClassOpt[]; session
             <h2 className="font-display text-lg font-medium tracking-tight">Students <span className="text-muted-foreground font-normal">({rows.length})</span></h2>
           </div>
           {noRows ? (
-            <div className="px-6 py-12 text-center"><p className="text-sm text-muted-foreground">No active students in this class.</p></div>
+            <div className="px-6 py-12 text-center">
+              {/* app-roster-states-v1 */}
+              {sessions.find((s) => s.id === sessionId)?.isCurrent === false ? (
+                <p className="mx-auto max-w-md text-sm text-muted-foreground">Nobody was enrolled in this class for this session. Enrolment is recorded per session, so an earlier session shows only the students enrolled at the time.</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">No students in this class yet.</p>
+              )}
+            </div>
           ) : (
             <div className="divide-y">
               {rows.map((row) => (
                 <div key={row.id} className="flex items-center justify-between gap-4 px-6 py-3 hover:bg-muted/30 transition-colors">
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{row.lastName} {row.firstName}</p>
+                    <p className="font-medium truncate">{row.lastName} {row.firstName}{row.archivedAt ? <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground align-middle">Left</span> : null}</p> {/* app-roster-states-v1 */}
                     <p className="text-xs text-muted-foreground truncate">{row.admissionNumber}</p>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">

@@ -26,6 +26,11 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
   const router = useRouter()
   const [teachers, setTeachers] = useState(initialTeachers)
   const [actionInFlight, setActionInFlight] = useState<string | null>(null)
+  // app-roster-states-v1: the seat cap counts revokedAt: null, so a revoked teacher does
+  // NOT hold a seat. Counting every row here made a Starter school with 10
+  // active and 3 revoked read "13" while being told it was full at 10.
+  const seatsUsed = teachers.filter((t) => t.status !== 'REVOKED').length
+  const revokedCount = teachers.length - seatsUsed
   const [statusMessage, setStatusMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   const [showInviteForm, setShowInviteForm] = useState(false)
@@ -274,7 +279,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="border-b px-6 py-4">
           <h2 className="font-display text-lg font-medium tracking-tight">
-            All teachers <span className="text-muted-foreground font-normal">({teachers.length})</span>
+            All teachers <span className="text-muted-foreground font-normal">({seatsUsed} using a seat{revokedCount > 0 ? ` · ${revokedCount} revoked` : ''})</span>
           </h2>
         </div>
 
