@@ -38,6 +38,7 @@ export function StudentsClient({
   const [classFilter, setClassFilter] = useState<string>('')
   const [showArchived, setShowArchived] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false) // app-bulk-import-v1
   const [editing, setEditing] = useState<Student | null>(null)
   const [archiving, setArchiving] = useState<Student | null>(null)
   const [loading, setLoading] = useState(false)
@@ -112,14 +113,26 @@ export function StudentsClient({
         </p>
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            disabled={!canAdd}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            + New student
-          </button>
+          {/* app-bulk-import-v1: both actions in one group so justify-between still
+              puts the filters on the right. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              disabled={!canAdd}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              + New student
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              disabled={!canAdd}
+              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Import from CSV
+            </button>
+          </div>
 
           <div className="flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -236,6 +249,12 @@ export function StudentsClient({
           onSaved={async () => { setCreateOpen(false); await reload(); startTransition(() => router.refresh()) }}
         />
       )}
+      {importOpen && (
+        <BulkImportDialog
+          onClose={() => setImportOpen(false)}
+          onImported={async () => { await reload(); startTransition(() => router.refresh()) }}
+        />
+      )}
       {editing && (
         <StudentFormDialog
           mode="edit"
@@ -258,6 +277,154 @@ export function StudentsClient({
 
 const inputClass =
   'mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm'
+
+// app-bulk-import-v1: bulk import. The file is read as TEXT and POSTed as text/csv.
+// Not FormData, not multipart - the API parses the raw bytes so the CSV
+// rules (Excel BOM, quoted commas, # rows) stay server-side and testable.
+type BulkResult = { created: number; updated: number; errors: string[]; totalRows: number }
+
+function BulkImportDialog({
+  onClose,
+  onImported,
+}: {
+  onClose: () => void
+  onImported: () => void | Promise<void>
+}) {
+  const [file, setFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<BulkResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function submit() {
+    if (!file) { setError('Choose a CSV file first'); return }
+    setError(null)
+    setResult(null)
+    setSubmitting(true)
+    let res: Response
+    try {
+      const text = await file.text()
+      res = await fetch('/api/students/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/csv' },
+        body: text,
+      })
+    } catch {
+      setSubmitting(false)
+      setError('Could not read that file. Save it as CSV and try again.')
+      return
+    }
+    setSubmitting(false)
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      setError(data?.error?.message || 'Import failed')
+      // A rejected import can still carry per-row errors worth showing.
+      if (Array.isArray(data?.errors) && data.errors.length) {
+        setResult({ created: 0, updated: 0, errors: data.errors, totalRows: data.totalRows ?? 0 })
+      }
+      return
+    }
+    setResult({
+      created: data?.created ?? 0,
+      updated: data?.updated ?? 0,
+      errors: Array.isArray(data?.errors) ? data.errors : [],
+      totalRows: data?.totalRows ?? 0,
+    })
+    toast.success(`${data?.created ?? 0} added, ${data?.updated ?? 0} updated`)
+    await onImported()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="font-display text-2xl font-medium leading-tight tracking-tight">Import students</h2>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          Upload a CSV and every student in it is added at once. Leave the
+          admission number blank and one is generated for you.
+        </p>
+
+        <ol className="mt-6 space-y-3 text-sm">
+          <li className="flex gap-3">
+            <span className="text-muted-foreground">1.</span>
+            <span>
+              <a href="/api/students/bulk/template" className="font-medium text-primary underline">
+                Download the template
+              </a>
+              <span className="text-muted-foreground"> — it lists your class names.</span>
+            </span>
+          </li>
+          <li className="flex gap-3">
+            <span className="text-muted-foreground">2.</span>
+            <span className="text-muted-foreground">Fill one row per student and save as CSV.</span>
+          </li>
+          <li className="flex gap-3">
+            <span className="text-muted-foreground">3.</span>
+            <span className="text-muted-foreground">Upload it below.</span>
+          </li>
+        </ol>
+
+        <div className="mt-6">
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); setError(null) }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+          >
+            {file ? 'Choose a different file' : 'Choose CSV file'}
+          </button>
+          {file && <p className="mt-2 text-xs text-muted-foreground">{file.name}</p>}
+        </div>
+
+        {error && <p className="mt-4 text-xs text-red-600">{error}</p>}
+
+        {result && (
+          <div className="mt-6 rounded-lg border bg-muted/20 p-4">
+            <p className="text-sm font-medium">
+              {result.created} added · {result.updated} updated · {result.totalRows} rows read
+            </p>
+            {result.errors.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-medium text-amber-700">
+                  {result.errors.length === 1 ? '1 row was skipped' : `${result.errors.length} rows were skipped`}
+                </p>
+                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto">
+                  {result.errors.map((e, i) => (
+                    <li key={i} className="text-xs leading-relaxed text-muted-foreground">{e}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Fix those lines in your file and upload it again. Rows that
+                  already imported will not be duplicated if they have an
+                  admission number.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">
+            {result ? 'Done' : 'Cancel'}
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={submitting || !file}
+            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          >
+            {submitting ? 'Importing…' : 'Import'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function StudentFormDialog({
   mode,

@@ -25,12 +25,19 @@ export async function apiFetch<T = unknown>(
     body?: unknown
     token?: string
     headers?: Record<string, string>
+    // app-bulk-import-v1: send a body VERBATIM (CSV upload). When set, the body is not
+    // JSON.stringify'd and Content-Type comes from rawContentType.
+    rawBody?: string
+    rawContentType?: string
+    // app-bulk-import-v1: read the RESPONSE as text (CSV download). Without this,
+    // res.json() throws on a CSV body and data comes back null.
+    asText?: boolean
   } = {}
 ): Promise<ApiResponse<T>> {
-  const { method = 'GET', body, token, headers = {} } = opts
+  const { method = 'GET', body, token, headers = {}, rawBody, rawContentType, asText } = opts // app-bulk-import-v1
 
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
+    'Content-Type': rawBody !== undefined ? (rawContentType || 'text/plain') : 'application/json', // app-bulk-import-v1
     ...headers,
   }
   if (token) requestHeaders.Authorization = `Bearer ${token}`
@@ -40,7 +47,7 @@ export async function apiFetch<T = unknown>(
     res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: requestHeaders,
-      body: body ? JSON.stringify(body) : undefined,
+      body: rawBody !== undefined ? rawBody : body ? JSON.stringify(body) : undefined, // app-bulk-import-v1
       cache: 'no-store',
     })
   } catch (err) {
@@ -59,7 +66,7 @@ export async function apiFetch<T = unknown>(
 
   let payload: unknown = null
   try {
-    payload = await res.json()
+    payload = asText ? await res.text() : await res.json() // app-bulk-import-v1
   } catch {
     /* empty body is fine */
   }
