@@ -68,6 +68,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
   const [rows, setRows] = useState<EligibilityRow[]>([])
   const [decisions, setDecisions] = useState<Record<string, Verb>>({})
   const [executing, setExecuting] = useState(false)
+  const [confirming, setConfirming] = useState(false) // promotion-confirm-v1
 
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -112,6 +113,18 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
   const selectable = rows.filter((r) => !r.alreadyPromoted)
   const promoteCount = selectable.filter((r) => decisions[r.student.id] === 'PROMOTE').length
   const retainCount = selectable.filter((r) => decisions[r.student.id] === 'RETAIN').length
+  // promotion-confirm-v1: promotion advances into the next session; only one
+  // session means nothing to promote into (B3 refuses same-session promotion).
+  const needsNextSession = sessions.length < 2
+  const toPromote = selectable.filter((r) => (decisions[r.student.id] ?? 'RETAIN') === 'PROMOTE')
+  const toRetain = selectable.filter((r) => (decisions[r.student.id] ?? 'RETAIN') === 'RETAIN')
+
+  function openConfirm() { // promotion-confirm-v1
+    if (!targetClassId) { toast.error('Pick a target class'); return }
+    if (targetClassId === sourceClassId) { toast.error('Target class must differ from source'); return }
+    if (selectable.length === 0) { toast.error('No students to promote (all already have a record)'); return }
+    setConfirming(true)
+  }
 
   async function execute() {
     if (!targetClassId) { toast.error('Pick a target class'); return }
@@ -144,6 +157,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
     }
     const data = await res.json().catch(() => null)
     const ex = data?.executed ?? { promoted: 0, retained: 0, skipped: 0 }
+    setConfirming(false) // promotion-confirm-v1
     toast.success(`Promoted ${ex.promoted}, retained ${ex.retained}${ex.skipped ? `, skipped ${ex.skipped}` : ''}`)
     await load()
   }
@@ -185,6 +199,13 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
           Move a class up at the end of a session. Eligibility is based on each student&apos;s cumulative average across the terms that have results. Review the suggestion, adjust per student, then promote into the class you choose. Every promotion is reversible.
         </p>
 
+        {needsNextSession && (
+          <div className="mt-8 rounded-xl border border-amber-300/60 bg-amber-50/60 px-6 py-5 text-sm text-amber-800">
+            <p className="font-medium">You need a next session before you can promote.</p>
+            <p className="mt-1">Promotion moves students from this session into the next one. You currently have only one session, so there is nowhere to promote into yet. Create the next session in <Link href="/dashboard/academic" className="font-medium underline">Academic setup</Link>, then come back.</p>
+          </div>
+        )}
+
         <div className="mt-10 rounded-xl border bg-card p-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <label className="text-xs text-muted-foreground">Source class
@@ -214,7 +235,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
               <input type="number" min={0} max={100} value={threshold} onChange={(e) => { setThreshold(e.target.value); invalidate() }} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground" />
             </label>
             <div className="flex items-end">
-              <button type="button" onClick={load} disabled={loading || !sourceClassId || !sessionId} className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              <button type="button" onClick={load} disabled={loading || !sourceClassId || !sessionId || needsNextSession} className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
                 {loading ? 'Loading…' : 'Load eligibility'}
               </button>
             </div>
@@ -269,12 +290,46 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
                   })}
                 </div>
 
+                {confirming && (
+                  <div className="mt-5 rounded-xl border border-primary/40 bg-primary/5 px-5 py-4"> {/* promotion-confirm-panel */}
+                    <p className="text-sm font-medium">Confirm these outcomes before saving.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Parents may see these results — check each name.</p>
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-primary">Promoting ({toPromote.length}) → {activeClasses.find((c) => c.id === targetClassId)?.name ?? '—'}</p>
+                        {toPromote.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">Nobody.</p>
+                        ) : (
+                          <ul className="mt-1 space-y-0.5">
+                            {toPromote.map((r) => <li key={r.student.id} className="text-sm">{fullName(r.student)}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Retaining ({toRetain.length}) → stays in {activeClasses.find((c) => c.id === sourceClassId)?.name ?? '—'}</p>
+                        {toRetain.length === 0 ? (
+                          <p className="mt-1 text-xs text-muted-foreground">Nobody.</p>
+                        ) : (
+                          <ul className="mt-1 space-y-0.5">
+                            {toRetain.map((r) => <li key={r.student.id} className="text-sm">{fullName(r.student)}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center gap-3">
+                      <button type="button" onClick={execute} disabled={executing} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+                        {executing ? 'Working…' : `Confirm — promote ${toPromote.length}, retain ${toRetain.length}`}
+                      </button>
+                      <button type="button" onClick={() => setConfirming(false)} disabled={executing} className="rounded-md border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors disabled:opacity-50">Cancel</button>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-5 py-4">
                   <p className="text-sm text-muted-foreground">
                     {targetClassId ? <>Promoting into <span className="font-medium text-foreground">{activeClasses.find((c) => c.id === targetClassId)?.name}</span>.</> : 'Choose a target class above to enable promotion.'}
                   </p>
-                  <button type="button" onClick={execute} disabled={executing || !targetClassId || selectable.length === 0} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
-                    {executing ? 'Working…' : `Execute (${promoteCount} promote, ${retainCount} retain)`}
+                  <button type="button" onClick={openConfirm} disabled={executing || confirming || !targetClassId || selectable.length === 0} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+                    {executing ? 'Working…' : `Review & execute (${promoteCount} promote, ${retainCount} retain)`}
                   </button>
                 </div>
               </>
