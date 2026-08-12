@@ -17,12 +17,14 @@ export function BillingClient({
   status,
   expired = false,
   periodLabel = 'month',
+  lockedPlan = null,
 }: {
   prices: Record<string, number>
   currentPlan: string | null
   status: string | null
   expired?: boolean
   periodLabel?: string
+  lockedPlan?: string | null
 }) {
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +82,11 @@ export function BillingClient({
                 </p>
                 <p className="mt-3 font-display text-3xl font-medium">{naira(prices[plan] ?? 0)}</p>
                 <p className="text-xs text-muted-foreground">per {periodLabel}</p>
+                {plan === lockedPlan && (
+                  <p className="mt-2 inline-flex w-fit rounded-md border border-border bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                    Locked price — held for your school
+                  </p>
+                )}
                 <div className="mt-6 flex-1" />
                 {isCurrent ? (
                   <span className="rounded-lg border border-border bg-muted px-4 py-2 text-center text-sm font-medium text-muted-foreground">

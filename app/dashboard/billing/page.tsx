@@ -7,7 +7,7 @@ import { BillingClient } from './_components/billing-client'
 
 export const dynamic = 'force-dynamic'
 
-type PlansResp = { prices: Record<string, number>; currency: string; periodDays?: number; periodLabel?: string }
+type PlansResp = { prices: Record<string, number>; currency: string; periodDays?: number; periodLabel?: string; lockedPlan?: string | null }
 type MeResp = {
   user: {
     role: string
@@ -25,8 +25,9 @@ export default async function BillingPage() {
   if (user.role !== 'SCHOOL_ADMIN') redirect('/dashboard')
 
   const plansR = await apiFetch<PlansResp>('/api/billing/plans', { token })
-  const prices = plansR.data?.prices ?? { starter: 4000000, standard: 6000000, premium: 15000000 }
+  const prices = plansR.data?.prices ?? { starter: 2000000, standard: 3500000, premium: 5500000 } // subscribe-lockedplan-v1: repriced fallback (only shows if /plans fails)
   const periodLabel = plansR.data?.periodLabel ?? 'month'
+  const lockedPlan = plansR.data?.lockedPlan ?? null // subscribe-lockedplan-v1
   const sub = user.school?.subscription ?? null
   const currentPlan = sub?.plan ?? null
   const status = sub?.status ?? null
@@ -34,5 +35,5 @@ export default async function BillingPage() {
   // The "Current plan" lock only applies while paid time genuinely remains.
   const expired = status === 'ACTIVE' && !!sub?.endDate && new Date(sub.endDate as string).getTime() < Date.now()
 
-  return <BillingClient prices={prices} currentPlan={currentPlan} status={status} expired={expired} periodLabel={periodLabel} />
+  return <BillingClient prices={prices} currentPlan={currentPlan} status={status} expired={expired} periodLabel={periodLabel} lockedPlan={lockedPlan} />
 }
