@@ -69,6 +69,33 @@ Every payment buys exactly 30 days. Paying early stacks the days on top. A 14-da
 
 ---
 
+## Getting it running (for whoever sets it up)
+
+The app is a Next.js program (a modern website framework). Like the engine, someone technical sets it up once and then it runs itself on the server. Each boxed line is a command typed into a terminal.
+
+**You need first:** Node.js (version 20 or newer), and the **engine (klassrun-api) already running** on the same machine at `http://localhost:4000`. The app is a front desk — its engine must be up, or the screens have nothing to talk to.
+
+**1. Get the code's building blocks:**
+```
+npm install
+```
+
+**2. Point it at the engine.** Copy the example settings file; the defaults already point at the local engine on port 4000:
+```
+cp .env.example .env.local
+```
+The two settings inside are the engine's address (`KLASSRUN_API_URL`) and the app's own address (`NEXT_PUBLIC_APP_URL`).
+
+**3. Start it:**
+```
+npm run dev
+```
+Then open `http://localhost:3000` in a browser — that's the portal you log into.
+
+**On the real server** the app lives on **Vercel** and **redeploys itself automatically** whenever code is pushed to the `main` branch. Its settings there point at the live engine (`https://klassrun-api.onrender.com`) instead of the local one, and it runs as a full application (not a static page dump) because it needs to run its own secure "relay to the engine" steps out of the browser's reach.
+
+---
+
 ## Where it lives and how it's kept safe
 
 - **Hosting:** the app runs on **Vercel**. It's a full application (not a static page dump), because it needs to run those secure "relay to the engine" steps on its own server, out of the browser's reach.
