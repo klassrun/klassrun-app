@@ -61,7 +61,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
   const [targetClassId, setTargetClassId] = useState<string>('')
   const [sessionId, setSessionId] = useState<string>(currentSession?.id ?? '')
   const [term, setTerm] = useState<'FIRST' | 'SECOND' | 'THIRD'>(currentSession?.currentTerm ?? 'THIRD')
-  const [threshold, setThreshold] = useState<string>('50')
+  const [threshold, setThreshold] = useState<string>('45') // pass-mark-v1
 
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
