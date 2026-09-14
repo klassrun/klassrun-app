@@ -6,6 +6,7 @@
 // batch-2c-phase-4a-teacher-dashboard
 import Image from 'next/image'
 import Link from 'next/link'
+import { ClassTeacherNav } from './class-teacher-nav' // classteacher-app-v1
 
 type Me = {
   id: string
@@ -267,6 +268,10 @@ export function TeacherDashboard({
           </section>
             </div>
           </section>
+
+          {/* classteacher-app-v1: renders nothing unless this teacher is a class
+              teacher of at least one class. */}
+          <ClassTeacherNav userId={me.id} />
 
           {/* ops-1b-teacher-nav */}
           <section className="mt-10">

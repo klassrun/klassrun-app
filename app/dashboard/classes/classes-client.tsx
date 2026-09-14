@@ -15,6 +15,16 @@ type ClassItem = {
   createdAt: string
   updatedAt: string
   _count: { subjects: number }
+  classTeacherId?: string | null // classteacher-app-v1
+}
+
+// classteacher-app-v1: just enough of a teacher to name them in the picker.
+type TeacherLite = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  revokedAt: string | null
 }
 
 type LevelValue = 'junior' | 'senior' | ''
@@ -33,6 +43,21 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
   const [editing, setEditing] = useState<ClassItem | null>(null)
   const [archiving, setArchiving] = useState<ClassItem | null>(null)
   const [loadingArchived, setLoadingArchived] = useState(false)
+  // classteacher-app-v1: loaded once here, shared by the rows and the edit dialog,
+  // so opening the dialog does not re-fetch.
+  const [teachers, setTeachers] = useState<TeacherLite[]>([])
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const res = await fetch('/api/teachers', { cache: 'no-store' }).catch(() => null)
+      if (!res || !res.ok || cancelled) return
+      const data = await res.json().catch(() => null)
+      const list: TeacherLite[] = Array.isArray(data?.teachers) ? data.teachers : []
+      if (!cancelled) setTeachers(list.filter((t) => t.revokedAt === null))
+    })()
+    return () => { cancelled = true }
+  }, [])
+  const teacherNameById = new Map(teachers.map((t) => [t.id, `${t.firstName} ${t.lastName}`]))
 
   // fix-5-prop-sync: router.refresh() re-runs the server component, but
   // useState locks the first initialClasses — sync on prop change.
@@ -152,6 +177,7 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
                       <ClassRow
                         key={c.id}
                         item={c}
+                        teacherName={c.classTeacherId ? (teacherNameById.get(c.classTeacherId) ?? null) : null}
                         onEdit={() => setEditing(c)}
                         onArchive={() => setArchiving(c)}
                         clickable={!c.archivedAt}
@@ -203,6 +229,7 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
       {createOpen && (
         <ClassFormDialog
           mode="create"
+          teachers={teachers}
           onClose={() => setCreateOpen(false)}
           onSaved={async () => {
             setCreateOpen(false)
@@ -216,6 +243,7 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
         <ClassFormDialog
           mode="edit"
           initial={editing}
+          teachers={teachers}
           onClose={() => setEditing(null)}
           onSaved={async () => {
             setEditing(null)
@@ -242,11 +270,13 @@ export function ClassesClient({ initialClasses }: { initialClasses: ClassItem[] 
 
 function ClassRow({
   item,
+  teacherName,
   onEdit,
   onArchive,
   clickable,
 }: {
   item: ClassItem
+  teacherName?: string | null // classteacher-app-v1
   onEdit: () => void
   onArchive: () => void
   clickable: boolean
@@ -257,7 +287,11 @@ function ClassRow({
     <div className="flex items-center justify-between px-6 py-4">
       <div>
         <p className="font-medium">{item.name}</p>
-        <p className="text-xs text-muted-foreground">{subjectLabel}</p>
+        <p className="text-xs text-muted-foreground">
+          {subjectLabel}
+          {/* classteacher-app-v1 */}
+          {teacherName ? <> · Class teacher: {teacherName}</> : <> · <span className="italic">No class teacher</span></>}
+        </p>
       </div>
       <div className="flex items-center gap-2">
         <button
@@ -292,11 +326,13 @@ function ClassRow({
 function ClassFormDialog({
   mode,
   initial,
+  teachers,
   onClose,
   onSaved,
 }: {
   mode: 'create' | 'edit'
   initial?: ClassItem
+  teachers: TeacherLite[] // classteacher-app-v1
   onClose: () => void
   onSaved: () => void | Promise<void>
 }) {
@@ -308,6 +344,10 @@ function ClassFormDialog({
   )
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // classteacher-app-v1: '' means no class teacher. Edit-only — POST /api/classes
+  // accepts name and level only, so offering this on create would look like it
+  // saved and silently drop the value.
+  const [classTeacherId, setClassTeacherId] = useState<string>(initial?.classTeacherId ?? '')
 
   async function submit() {
     setError(null)
@@ -318,6 +358,9 @@ function ClassFormDialog({
     setSubmitting(true)
     const payload: Record<string, any> = { name: trimmed }
     payload.level = level === '' ? null : level
+    // classteacher-app-v1: null clears the assignment; the API validates the id
+    // against a live TEACHER in this school.
+    if (mode === 'edit') payload.classTeacherId = classTeacherId === '' ? null : classTeacherId
 
     const url = mode === 'create' ? '/api/classes' : `/api/classes/${initial!.id}`
     const method = mode === 'create' ? 'POST' : 'PATCH'
@@ -418,6 +461,31 @@ function ClassFormDialog({
               </label>
             </div>
           </div>
+
+          {/* classteacher-app-v1 */}
+          {mode === 'edit' && (
+            <div>
+              <label htmlFor="class-teacher" className="block text-xs font-medium text-foreground">
+                Class teacher
+              </label>
+              <select
+                id="class-teacher"
+                value={classTeacherId}
+                onChange={(e) => setClassTeacherId(e.target.value)}
+                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">No class teacher</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>{t.firstName} {t.lastName} — {t.email}</option>
+                ))}
+              </select>
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                {teachers.length === 0
+                  ? 'No active teachers yet — invite one from the Teachers page first.'
+                  : 'The class teacher can record attendance and behaviour for this class.'}
+              </p>
+            </div>
+          )}
 
           {error && (
             <p className="text-xs text-red-600">{error}</p>

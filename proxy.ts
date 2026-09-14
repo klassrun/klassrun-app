@@ -69,6 +69,22 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
+    // classteacher-app-v1 — attendance + behaviour are reachable by SCHOOL_ADMIN and
+    // TEACHER. A class teacher is narrowed to their OWN class by the API and by
+    // the page; this gate only decides who may reach the route at all. As the
+    // note above says, the role cookie is not a security boundary.
+    if (
+      (pathname.startsWith('/dashboard/attendance') ||
+       pathname.startsWith('/dashboard/behaviour')) &&
+      role !== 'SCHOOL_ADMIN' &&
+      role !== 'TEACHER'
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      url.search = ''
+      return NextResponse.redirect(url)
+    }
+
     // /dashboard/teachers and /dashboard/settings are SCHOOL_ADMIN only
     if (
       (pathname.startsWith('/dashboard/teachers') ||
@@ -76,8 +92,8 @@ export function proxy(request: NextRequest) {
        pathname.startsWith('/dashboard/classes') || // batch-2c-phase-2-classes-gate
        pathname.startsWith('/dashboard/students') || // ops-1b-admin-gate
        pathname.startsWith('/dashboard/report-cards') ||
-       pathname.startsWith('/dashboard/attendance') || // ops-2b-admin-gate
-       pathname.startsWith('/dashboard/behaviour') || // ops-2b-admin-gate
+       // classteacher-app-v1: attendance + behaviour moved to their own gate below
+       // (SCHOOL_ADMIN or TEACHER), replacing the ops-2b-admin-gate entries.
        pathname.startsWith('/dashboard/promotions') || // ops-3-admin-gate
        // ops-4-admin-gate — fees moved to the dedicated ops-4c-fees-gate above (BURSAR access)
        pathname.startsWith('/dashboard/academic')) && // batch-2c-phase-1-academic-gate
