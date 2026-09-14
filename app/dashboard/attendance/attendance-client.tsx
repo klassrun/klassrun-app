@@ -39,6 +39,11 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
   const [loaded, setLoaded] = useState(false)
   const [rows, setRows] = useState<EditRow[]>([])
   const [className, setClassName] = useState<string>('')
+  // attendance-bulk-v1: one shared days-opened value, plus bulk-save progress.
+  const [daysOpened, setDaysOpened] = useState<string>('')
+  const [savingAll, setSavingAll] = useState(false)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const dirtyCount = rows.filter((r) => r.dirty).length
 
   async function loadGrid() {
     if (!classId) { toast.error('Pick a class'); return }
@@ -50,7 +55,12 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
     if (!res.ok) { const b = await res.json().catch(() => null); toast.error(b?.error?.message || 'Could not load roster'); return }
     const data = await res.json().catch(() => null)
     if (!data?.rows) { toast.error('Unexpected response'); return }
-    setRows((data.rows as GridRow[]).map((r) => ({ ...r, saving: false, dirty: false })))
+    const loadedRows: EditRow[] = (data.rows as GridRow[]).map((r) => ({ ...r, saving: false, dirty: false }))
+    setRows(loadedRows)
+    // attendance-bulk-v1: seed the shared box from whatever is already saved, so
+    // re-opening a term you already entered does not show it blank.
+    const alreadySet = loadedRows.find((r) => r.schoolOpened > 0)
+    setDaysOpened(alreadySet ? String(alreadySet.schoolOpened) : '')
     setClassName(data.class?.name ?? classes.find((c) => c.id === classId)?.name ?? '')
     setLoaded(true)
   }
@@ -85,6 +95,59 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
     toast.success('Saved')
   }
 
+  // attendance-bulk-v1: "days the school opened" is a SCHOOL fact — the same number
+  // for every student in the class. Typing it once per row was the bulk of the
+  // work on this page. The per-row boxes stay for the student who joined or
+  // left mid-term and genuinely has a different figure.
+  function applyDaysOpenedToAll() {
+    const n = toInt(daysOpened)
+    if (!daysOpened.trim() || n <= 0) { toast.error('Enter the number of days the school opened'); return }
+    setRows((prev) => prev.map((r) => (r.schoolOpened === n ? r : { ...r, schoolOpened: n, dirty: true })))
+    toast.success(`Days opened set to ${n} for every student`)
+  }
+
+  // attendance-bulk-v1: the API saves one student at a time, so this loops.
+  // SEQUENTIALLY on purpose — forty parallel POSTs would hammer the API.
+  // A row that fails stays marked unsaved, so pressing Save all again retries
+  // only the failures.
+  async function saveAll() {
+    const pending = rows.filter((r) => r.dirty)
+    if (pending.length === 0) { toast.error('Nothing to save'); return }
+    const invalid = pending.filter((r) => r.present > r.schoolOpened || r.absent > r.schoolOpened)
+    if (invalid.length > 0) {
+      toast.error(`${invalid.length} row${invalid.length === 1 ? ' has' : 's have'} present or absent above days opened. Fix those first.`)
+      return
+    }
+    setSavingAll(true)
+    setProgress({ done: 0, total: pending.length })
+    const failed: string[] = []
+    for (let i = 0; i < pending.length; i++) {
+      const row = pending[i]
+      try {
+        const res = await fetch('/api/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentId: row.student.id, sessionId, term, schoolOpened: row.schoolOpened, present: row.present, absent: row.absent }),
+        })
+        if (res.ok) {
+          setRows((prev) => prev.map((r) => (r.student.id === row.student.id ? { ...r, hasEntry: true, dirty: false } : r)))
+        } else {
+          failed.push(`${row.student.lastName} ${row.student.firstName}`)
+        }
+      } catch {
+        failed.push(`${row.student.lastName} ${row.student.firstName}`)
+      }
+      setProgress({ done: i + 1, total: pending.length })
+    }
+    setSavingAll(false)
+    setProgress(null)
+    if (failed.length === 0) {
+      toast.success(`Saved ${pending.length} student${pending.length === 1 ? '' : 's'}`)
+    } else {
+      toast.error(`${failed.length} could not be saved: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}. Still marked unsaved — press Save all again to retry just those.`)
+    }
+  }
+
   return (
     <Shell>
       <div className="mt-10 rounded-xl border bg-card p-6">
@@ -117,6 +180,32 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
       {loaded && (
         <section className="mt-8">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{className} · {TERMS.find((t) => t.value === term)?.label}</h2>
+          {/* attendance-bulk-v1 */}
+          {rows.length > 0 && (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex items-end gap-2">
+                <label className="text-xs text-muted-foreground">Days the school opened
+                  <input
+                    type="number"
+                    min={0}
+                    value={daysOpened}
+                    onChange={(e) => setDaysOpened(e.target.value)}
+                    placeholder="e.g. 62"
+                    className="mt-1 w-28 rounded-md border border-border bg-background px-2 py-2 text-center text-sm"
+                  />
+                </label>
+                <button type="button" onClick={applyDaysOpenedToAll} disabled={savingAll} className="rounded-md border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50 transition-colors">
+                  Apply to all
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                {dirtyCount > 0 && <span className="text-xs text-muted-foreground">{dirtyCount} unsaved</span>}
+                <button type="button" onClick={saveAll} disabled={savingAll || dirtyCount === 0} className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+                  {savingAll && progress ? `Saving ${progress.done} of ${progress.total}…` : 'Save all'}
+                </button>
+              </div>
+            </div>
+          )}
           {rows.length === 0 ? (
             <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
               {/* app-roster-states-v1: an empty PAST session is correct, not broken. Saying
@@ -148,7 +237,7 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
                       <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.schoolOpened} onChange={(e) => setField(r.student.id, 'schoolOpened', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
                       <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.present} onChange={(e) => setField(r.student.id, 'present', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
                       <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.absent} onChange={(e) => setField(r.student.id, 'absent', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
-                      <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => saveRow(r.student.id)} disabled={r.saving} className={['rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50', r.dirty ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border bg-background hover:bg-muted'].join(' ')}>{r.saving ? 'Saving…' : r.hasEntry && !r.dirty ? 'Saved' : 'Save'}</button></td>
+                      <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => saveRow(r.student.id)} disabled={r.saving || savingAll} className={['rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50', r.dirty ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border bg-background hover:bg-muted'].join(' ')}>{r.saving ? 'Saving…' : r.hasEntry && !r.dirty ? 'Saved' : 'Save'}</button></td>
                     </tr>
                   ))}
                 </tbody>
