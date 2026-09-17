@@ -49,6 +49,12 @@ export function ClassTeacherNav({ userId }: { userId: string }) {
         You are the class teacher for {label}.
       </p>
       <div className="space-y-3">
+        {/* my-class-v1 */}
+        <NavCard
+          href="/dashboard/my-class"
+          title="My class"
+          body="Your class list. Add a student, or fix a name or guardian detail yourself."
+        />
         <NavCard
           href="/dashboard/attendance"
           title="Attendance"

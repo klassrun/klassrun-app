@@ -75,7 +75,8 @@ export function proxy(request: NextRequest) {
     // note above says, the role cookie is not a security boundary.
     if (
       (pathname.startsWith('/dashboard/attendance') ||
-       pathname.startsWith('/dashboard/behaviour')) &&
+       pathname.startsWith('/dashboard/behaviour') ||
+       pathname.startsWith('/dashboard/my-class')) && // my-class-v1
       role !== 'SCHOOL_ADMIN' &&
       role !== 'TEACHER'
     ) {
