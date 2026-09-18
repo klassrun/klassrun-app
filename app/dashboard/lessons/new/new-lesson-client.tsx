@@ -35,6 +35,9 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
   const [additionalNotes, setAdditionalNotes] = useState('')
   // batch-3-phase-1-5-subtopics-state
   const [subTopicsText, setSubTopicsText] = useState('')
+  // klassrun-periods-app-v1: one topic taught across several periods this week
+  const [periods, setPeriods] = useState<number>(1)
+  const [periodSubTopics, setPeriodSubTopics] = useState<string[]>(['', '', '', '', '', ''])
 
   const [stage, setStage] = useState<Stage>('SELECTING')
   const [error, setError] = useState<string | null>(null)
@@ -108,7 +111,11 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
       .map((s) => s.trim())
       .filter((s) => s.length > 0)
       .slice(0, 10)
-    if (subTopics.length > 0) body.subTopics = subTopics
+    // klassrun-periods-app-v1: several periods -> one sub-topic per period instead of the list
+    if (periods >= 2) {
+      body.periods = periods
+      body.periodSubTopics = periodSubTopics.slice(0, periods).map((s) => s.trim())
+    } else if (subTopics.length > 0) body.subTopics = subTopics
 
     const res = await fetch('/api/notes/generate', {
       method: 'POST',
@@ -249,7 +256,7 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
               </div>
               <div>
                 <label htmlFor="duration" className="block text-xs font-medium text-foreground">
-                  Duration (mins)
+                  {periods >= 2 ? 'Minutes per period' : 'Duration (mins)'}
                 </label>
                 <input
                   id="duration"
@@ -281,7 +288,56 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
               </p>
             </div>
 
+            {/* klassrun-periods-app-v1: one topic across several periods this week */}
+            <div>
+              <label htmlFor="periods" className="block text-xs font-medium text-foreground">
+                Periods this week
+              </label>
+              <select
+                id="periods"
+                value={periods}
+                onChange={(e) => setPeriods(Number(e.target.value))}
+                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>{n === 1 ? '1 period' : `${n} periods`}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Teaching this topic across several periods this week? The note will be split period by period.
+              </p>
+            </div>
+
+            {periods >= 2 && (
+              <div>
+                <p className="block text-xs font-medium text-foreground">
+                  Sub-topic for each period (optional)
+                </p>
+                <div className="mt-1 space-y-2">
+                  {Array.from({ length: periods }, (_, i) => (
+                    <input
+                      key={i}
+                      type="text"
+                      value={periodSubTopics[i] ?? ''}
+                      onChange={(e) => {
+                        const next = periodSubTopics.slice()
+                        next[i] = e.target.value
+                        setPeriodSubTopics(next)
+                      }}
+                      maxLength={100}
+                      placeholder={i === periods - 1 ? `Period ${i + 1} (blank = revision)` : `Period ${i + 1} (optional)`}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Leave any blank and the AI will choose it. A blank last period becomes revision.
+                </p>
+              </div>
+            )}
+
             {/* batch-3-phase-1-5-subtopics-ui */}
+            {periods < 2 && (
             <div>
               <label htmlFor="subtopics" className="block text-xs font-medium text-foreground">
                 Sub-topics (optional, one per line)
@@ -299,6 +355,8 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
                 Leave blank to let the AI decide the structure.
               </p>
             </div>
+
+            )}{/* klassrun-periods-app-v1: end of periods < 2 */}
 
             {/* bugfix-dedup-copy-v1: duplicate-note resolution card */}
             {duplicate && (
@@ -359,7 +417,7 @@ export function NewLessonClient({ assignments }: { assignments: Assignment[] }) 
             Generating your lesson note…
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            Usually takes 5–10 seconds.
+            {periods >= 2 ? 'A note split across several periods takes about a minute. Keep this page open.' : 'Usually takes under a minute.'}
           </p>
           <div className="mx-auto mt-8 h-2 w-48 overflow-hidden rounded-full bg-muted">
             <div className="h-full w-1/2 animate-pulse rounded-full bg-primary" />

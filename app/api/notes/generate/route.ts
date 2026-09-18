@@ -5,6 +5,9 @@ import { NextResponse } from 'next/server'
 import { apiFetch } from '@/lib/api'
 import { getAuthCookie } from '@/lib/auth-cookie'
 
+// klassrun-periods-app-v1: a note split across several periods takes ~1 minute.
+export const maxDuration = 120
+
 export async function POST(request: Request) {
   const token = await getAuthCookie()
   if (!token) {

@@ -22,6 +22,15 @@ type PresentationStep = {
   pupilActivity: string
 }
 
+// klassrun-periods-app-v1
+type Period = {
+  period?: number
+  subTopic: string
+  content: string
+  evaluation?: string[]
+  classwork?: string[]
+}
+
 type ExplanationSection = {
   subTopic: string
   content: string
@@ -40,7 +49,10 @@ export function LessonNoteRender({ content }: { content: Record<string, unknown>
   const materials      = get<string[]>('instructionalMaterials') ?? []
   const presentation   = get<PresentationStep[]>('presentation') ?? []
   const overview       = String(get<string>('explanationOverview') ?? '')
-  const sections       = get<ExplanationSection[]>('explanationSections') ?? []
+  // klassrun-periods-app-v1: period notes also store derived explanationSections;
+  // show the periods instead so the content does not appear twice.
+  const periods        = get<Period[]>('periods') ?? []
+  const sections       = periods.length > 0 ? [] : (get<ExplanationSection[]>('explanationSections') ?? [])
   const chalkboard     = String(get<string>('chalkboardSummary') ?? '')
   const evaluation     = get<string[]>('evaluation') ?? []
   const assignment     = String(get<string>('assignment') ?? '')
@@ -134,6 +146,45 @@ export function LessonNoteRender({ content }: { content: Record<string, unknown>
               </li>
             ))}
           </ol>
+        </SectionAccent>
+      )}
+
+      {/* klassrun-periods-app-v1: a note split across several periods this week */}
+      {periods.length > 0 && (
+        <SectionAccent title={`Lesson by period (${periods.length} periods)`}>
+          <div className="space-y-8">
+            {periods.map((p, i) => (
+              <div key={i}>
+                <h4 className="font-medium leading-tight">
+                  Period {p.period ?? i + 1}: <MathText text={p.subTopic} />
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">{duration} min</span>
+                </h4>
+                <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">
+                  <MathText text={p.content} />
+                </p>
+                {(p.evaluation ?? []).length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Evaluation</p>
+                    <ol className="mt-1 list-decimal pl-5 space-y-1 text-sm leading-relaxed">
+                      {(p.evaluation ?? []).map((x, j) => (
+                        <li key={j}><MathText text={x} /></li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                {(p.classwork ?? []).length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Classwork</p>
+                    <ol className="mt-1 list-decimal pl-5 space-y-1 text-sm leading-relaxed">
+                      {(p.classwork ?? []).map((x, j) => (
+                        <li key={j}><MathText text={x} /></li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </SectionAccent>
       )}
 
