@@ -18,6 +18,8 @@ type SubjectRow = {
   ca2: number
   objective: number
   theory: number
+  score5?: number // grading-config-app-v1
+  score6?: number
   total: number
   grade: string
   remark: string
@@ -34,6 +36,7 @@ type Snapshot = {
   session: string
   term: 'FIRST' | 'SECOND' | 'THIRD'
   subjects: SubjectRow[]
+  grading?: { components: Array<{ key: string; label: string; max: number }> } // grading-config-app-v1
   summary: {
     subjectsCount: number
     aggregate: number
@@ -56,6 +59,14 @@ export type ReportCardRecord = {
 }
 
 const TERM_LABEL: Record<string, string> = { FIRST: 'First Term', SECOND: 'Second Term', THIRD: 'Third Term' }
+// grading-config-app-v1: score columns follow the breakdown saved on the card;
+// cards generated before it (no snapshot.grading) show the original four.
+const LEGACY_SCORE_COLS: Array<{ key: string; label: string; max: number }> = [
+  { key: 'ca1', label: 'CA1', max: 20 },
+  { key: 'ca2', label: 'CA2', max: 20 },
+  { key: 'objective', label: 'Obj', max: 20 },
+  { key: 'theory', label: 'Theory', max: 40 },
+]
 const ordinal = (n: number | null) => (n == null ? '—' : `${n}${['th', 'st', 'nd', 'rd'][(n % 100 - n % 10 === 10 ? 0 : n % 10)] || 'th'}`)
 
 export function ReportCardView({ card }: { card: ReportCardRecord }) {
@@ -65,6 +76,7 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
   const [pdfBusy, setPdfBusy] = useState(false)
   const [lockBusy, setLockBusy] = useState(false)
   const snap = card.snapshot
+  const scoreCols = snap.grading?.components?.length ? snap.grading.components : LEGACY_SCORE_COLS // grading-config-app-v1
   const locked = !!lockedAt
 
   async function renderPdf() {
@@ -142,10 +154,7 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
               <thead>
                 <tr className="border-b bg-muted/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3 font-medium">Subject</th>
-                  <th className="px-2 py-3 text-center font-medium">CA1</th>
-                  <th className="px-2 py-3 text-center font-medium">CA2</th>
-                  <th className="px-2 py-3 text-center font-medium">Obj</th>
-                  <th className="px-2 py-3 text-center font-medium">Theory</th>
+                  {scoreCols.map((c) => <th key={c.key} className="px-2 py-3 text-center font-medium">{c.label}</th>)}
                   <th className="px-2 py-3 text-center font-medium">Total</th>
                   <th className="px-2 py-3 text-center font-medium">Grade</th>
                   <th className="px-2 py-3 text-center font-medium">Pos</th>
@@ -154,14 +163,11 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
               </thead>
               <tbody className="divide-y">
                 {snap.subjects.length === 0 ? (
-                  <tr><td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">No scores entered for this student yet.</td></tr>
+                  <tr><td colSpan={5 + scoreCols.length} className="px-4 py-6 text-center text-muted-foreground">No scores entered for this student yet.</td></tr>
                 ) : snap.subjects.map((s) => (
                   <tr key={s.subjectId} className="hover:bg-muted/20">
                     <td className="px-4 py-2.5 font-medium">{s.name}</td>
-                    <td className="px-2 py-2.5 text-center">{s.ca1}</td>
-                    <td className="px-2 py-2.5 text-center">{s.ca2}</td>
-                    <td className="px-2 py-2.5 text-center">{s.objective}</td>
-                    <td className="px-2 py-2.5 text-center">{s.theory}</td>
+                    {scoreCols.map((c) => <td key={c.key} className="px-2 py-2.5 text-center">{(s as unknown as Record<string, number | undefined>)[c.key] ?? 0}</td>)}
                     <td className="px-2 py-2.5 text-center font-medium">{s.total}</td>
                     <td className="px-2 py-2.5 text-center"><span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{s.grade}</span></td>
                     <td className="px-2 py-2.5 text-center">{ordinal(s.subjectPosition)}</td>

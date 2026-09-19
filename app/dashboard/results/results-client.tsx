@@ -12,13 +12,18 @@ import { toast } from 'sonner'
 import type { SubjectPair } from './page'
 
 type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean }
-type ScoreMax = { ca1: number; ca2: number; objective: number; theory: number }
+// grading-config-app-v1: score columns come from the term's breakdown (API: components)
+type SlotKey = 'ca1' | 'ca2' | 'objective' | 'theory' | 'score5' | 'score6'
+type ScoreMax = Partial<Record<SlotKey, number>>
+type GradingComponent = { key: SlotKey; label: string; max: number }
 type GridRow = {
   student: { id: string; admissionNumber: string; firstName: string; lastName: string; middleName: string | null }
   ca1: number
   ca2: number
   objective: number
   theory: number
+  score5?: number // grading-config-app-v1
+  score6?: number
   total: number | null
   grade: string | null
   hasEntry: boolean
@@ -30,8 +35,13 @@ const TERMS: Array<{ value: 'FIRST' | 'SECOND' | 'THIRD'; label: string }> = [
   { value: 'SECOND', label: 'Second Term' },
   { value: 'THIRD', label: 'Third Term' },
 ]
-const COMPONENTS: Array<keyof ScoreMax> = ['ca1', 'ca2', 'objective', 'theory']
-const COMPONENT_LABEL: Record<keyof ScoreMax, string> = { ca1: 'CA1', ca2: 'CA2', objective: 'Obj', theory: 'Theory' }
+// grading-config-app-v1: only used if the API sends no breakdown
+const LEGACY_COMPONENTS: GradingComponent[] = [
+  { key: 'ca1', label: 'CA1', max: 20 },
+  { key: 'ca2', label: 'CA2', max: 20 },
+  { key: 'objective', label: 'Obj', max: 20 },
+  { key: 'theory', label: 'Theory', max: 40 },
+]
 
 export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessions: SessionItem[] }) {
   const currentSession = sessions.find((s) => s.isCurrent) ?? sessions[0] ?? null
@@ -42,6 +52,8 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [scoreMax, setScoreMax] = useState<ScoreMax | null>(null)
+  const [components, setComponents] = useState<GradingComponent[]>(LEGACY_COMPONENTS) // grading-config-app-v1
+  const [breakdownLocked, setBreakdownLocked] = useState(false)
   const [rows, setRows] = useState<EditRow[]>([])
   const [meta, setMeta] = useState<{ subjectName: string; className: string } | null>(null)
 
@@ -68,20 +80,22 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
     const data = await res.json().catch(() => null)
     if (!data?.rows) { toast.error('Unexpected response'); return }
     setScoreMax(data.scoreMax ?? null)
+    setComponents(Array.isArray(data.components) && data.components.length > 0 ? (data.components as GradingComponent[]) : LEGACY_COMPONENTS) // grading-config-app-v1
+    setBreakdownLocked(!!data.breakdownLocked)
     setRows((data.rows as GridRow[]).map((r) => ({ ...r, saving: false, dirty: false })))
     setMeta({ subjectName: selectedPair.subjectName, className: selectedPair.className })
     setLoaded(true)
   }
 
-  function clampValue(field: keyof ScoreMax, raw: string): number {
-    const max = scoreMax ? scoreMax[field] : 100
+  function clampValue(field: SlotKey, raw: string): number {
+    const max = scoreMax?.[field] ?? 100
     const n = Math.floor(Number(raw))
     if (Number.isNaN(n) || n < 0) return 0
     if (n > max) return max
     return n
   }
 
-  function setField(studentId: string, field: keyof ScoreMax, raw: string) {
+  function setField(studentId: string, field: SlotKey, raw: string) {
     setRows((prev) => prev.map((r) => {
       if (r.student.id !== studentId) return r
       return { ...r, [field]: clampValue(field, raw), dirty: true }
@@ -101,10 +115,7 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
         subjectId: selectedPair.subjectId,
         sessionId,
         studentId,
-        ca1: row.ca1,
-        ca2: row.ca2,
-        objective: row.objective,
-        theory: row.theory,
+        ...Object.fromEntries(components.map((c) => [c.key, row[c.key] ?? 0])), // grading-config-app-v1
       }),
     })
     if (!res.ok) {
@@ -192,9 +203,9 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
                 <thead>
                   <tr className="border-b bg-muted/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 font-medium">Student</th>
-                    {COMPONENTS.map((c) => (
-                      <th key={c} className="px-2 py-3 text-center font-medium">
-                        {COMPONENT_LABEL[c]}{scoreMax ? <span className="block text-[9px] normal-case text-muted-foreground/70">/{scoreMax[c]}</span> : null}
+                    {components.map((c) => (
+                      <th key={c.key} className="px-2 py-3 text-center font-medium">
+                        {c.label}<span className="block text-[9px] normal-case text-muted-foreground/70">/{c.max}</span>
                       </th>
                     ))}
                     <th className="px-2 py-3 text-center font-medium">Total</th>
@@ -209,14 +220,14 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
                         <p className="font-medium leading-tight">{r.student.lastName} {r.student.firstName}</p>
                         <p className="font-mono text-[11px] text-muted-foreground">{r.student.admissionNumber}</p>
                       </td>
-                      {COMPONENTS.map((c) => (
-                        <td key={c} className="px-2 py-2.5 text-center">
+                      {components.map((c) => (
+                        <td key={c.key} className="px-2 py-2.5 text-center">
                           <input
                             type="number"
                             min={0}
-                            max={scoreMax ? scoreMax[c] : 100}
-                            value={r[c]}
-                            onChange={(e) => setField(r.student.id, c, e.target.value)}
+                            max={c.max}
+                            value={r[c.key] ?? 0}
+                            onChange={(e) => setField(r.student.id, c.key, e.target.value)}
                             className="w-16 rounded-md border border-border bg-background px-2 py-1 text-center text-sm"
                           />
                         </td>
@@ -246,6 +257,7 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
           )}
           <p className="mt-3 text-xs text-muted-foreground">
             Totals and grades are computed by Klassrun when you save — they reflect the school grading scale, not the numbers in the boxes.
+            {breakdownLocked ? ' The score breakdown for this term is locked because scores have been saved.' : ''}
           </p>
         </section>
       )}

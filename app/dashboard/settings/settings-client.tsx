@@ -221,6 +221,17 @@ export function SettingsClient({ school }: { school: School }) {
             </Field>
           </Section>
 
+          {/* grading-config-app-v1 */}
+          <Section title="Results">
+            <Link href="/dashboard/settings/score-breakdown" className="flex items-center justify-between gap-4 rounded-lg border bg-card px-4 py-3 text-sm transition-colors hover:bg-muted/40">
+              <span>
+                <span className="font-medium">Score breakdown</span>
+                <span className="block text-xs text-muted-foreground">How each subject&apos;s 100 marks are split, e.g. CA 40 + Exam 60</span>
+              </span>
+              <span aria-hidden="true">→</span>
+            </Link>
+          </Section>
+
           <Section title="Read-only">
             <div className="space-y-3 rounded-lg border bg-muted/30 p-4 text-sm">
               <ReadOnlyRow label="Portal" value={`${school.slug}.klassrun.com`} mono />
