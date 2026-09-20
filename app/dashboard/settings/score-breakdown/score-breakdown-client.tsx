@@ -17,7 +17,7 @@ export type BreakdownView = {
   parts: Part[]
   isDefault: boolean
   maxParts: number
-  currentTerm: { sessionName: string; term: 'FIRST' | 'SECOND' | 'THIRD'; locked: boolean; parts: Part[] } | null
+  currentTerm: { sessionName: string; term: 'FIRST' | 'SECOND' | 'THIRD'; locked: boolean; parts: Part[]; needsReview?: number } | null // grading-config-apply-app-v1
   note?: string
 }
 type Draft = { label: string; max: string }
@@ -57,6 +57,7 @@ export function ScoreBreakdownClient({ initial }: { initial: BreakdownView }) {
   const [view, setView] = useState<BreakdownView>(initial)
   const [draft, setDraft] = useState<Draft[]>(toDraft(initial.parts))
   const [saving, setSaving] = useState(false)
+  const [applyNow, setApplyNow] = useState(false) // grading-config-apply-app-v1
   const maxParts = view.maxParts || 6
   const { total, problems } = checkDraft(draft)
   const ct = view.currentTerm
@@ -87,6 +88,7 @@ export function ScoreBreakdownClient({ initial }: { initial: BreakdownView }) {
       const next = data as BreakdownView
       setView(next)
       setDraft(toDraft(next.parts))
+      setApplyNow(false)
       toast.success(next.note ?? 'Saved')
       router.refresh()
     } catch {
@@ -98,11 +100,11 @@ export function ScoreBreakdownClient({ initial }: { initial: BreakdownView }) {
 
   function save() {
     if (problems.length > 0) { toast.error(problems[0]); return }
-    send({ parts: draft.map((d) => ({ label: d.label.trim(), max: Number(d.max) })) })
+    send({ parts: draft.map((d) => ({ label: d.label.trim(), max: Number(d.max) })), applyToCurrentTerm: applyNow && !!ct?.locked })
   }
   function resetToDefault() {
     if (!confirm('Go back to the Klassrun default (CA1 20 · CA2 20 · Obj 20 · Theory 40)?')) return
-    send({ reset: true })
+    send({ reset: true, applyToCurrentTerm: applyNow && !!ct?.locked })
   }
 
   return (
@@ -127,6 +129,9 @@ export function ScoreBreakdownClient({ initial }: { initial: BreakdownView }) {
               <>
                 <p className="font-medium">{TERM_LABEL[ct.term]} {ct.sessionName} is locked to: {describe(ct.parts)}</p>
                 <p className="mt-1">Scores have already been saved this term, so it keeps this breakdown. Anything you save here applies from the next term.</p>
+                {(ct.needsReview ?? 0) > 0 && (
+                  <p className="mt-2 font-medium">{ct.needsReview} saved score{ct.needsReview === 1 ? ' does' : 's do'} not fit this term&apos;s breakdown yet. Teachers see {ct.needsReview === 1 ? 'it' : 'them'} highlighted in Results.</p>
+                )}
               </>
             ) : (
               <>
@@ -186,9 +191,24 @@ export function ScoreBreakdownClient({ initial }: { initial: BreakdownView }) {
           <p className="mt-2 text-xs text-muted-foreground">Keep names short (up to {LABEL_MAX} characters) so they fit on the report card, e.g. CA1, Test, Exam.</p>
         </section>
 
+        {/* grading-config-apply-app-v1: change a term that already has scores */}
+        {ct && ct.locked && (
+          <label className="mt-8 flex cursor-pointer items-start gap-3 rounded-xl border bg-card px-5 py-4 text-sm">
+            <input type="checkbox" checked={applyNow} onChange={(e) => setApplyNow(e.target.checked)} className="mt-0.5 h-4 w-4" />
+            <span>
+              <span className="font-medium">Also apply to {TERM_LABEL[ct.term]} {ct.sessionName}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                This term already has scores. They are not changed. Any that go over the new maximums are highlighted for
+                teachers to fix, and report cards can&apos;t be generated until they are. Not possible once any of this
+                term&apos;s report cards are locked.
+              </span>
+            </span>
+          </label>
+        )}
+
         <div className="mt-10 flex flex-wrap items-center gap-3">
           <button type="button" onClick={save} disabled={saving || problems.length > 0} className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save breakdown'}
+            {saving ? 'Saving…' : applyNow && ct?.locked ? 'Save and apply to this term' : 'Save breakdown'}
           </button>
           <button type="button" onClick={resetToDefault} disabled={saving || view.isDefault} className="rounded-lg border border-border bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-40">
             Reset to default
