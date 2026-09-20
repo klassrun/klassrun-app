@@ -10,6 +10,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import type { SubjectPair } from './page'
+import { BulkScores } from './_components/bulk-scores' // results-bulk-app-v1
 
 type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean }
 // grading-config-app-v1: score columns come from the term's breakdown (API: components)
@@ -198,6 +199,20 @@ export function ResultsClient({ pairs, sessions }: { pairs: SubjectPair[]; sessi
           <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             {meta.className} · {meta.subjectName} · {TERMS.find((t) => t.value === term)?.label}
           </h2>
+
+          {/* results-bulk-app-v1 */}
+          {selectedPair && (
+            <BulkScores
+              subjectId={selectedPair.subjectId}
+              sessionId={sessionId}
+              term={term}
+              className={meta.className}
+              subjectName={meta.subjectName}
+              components={components}
+              roster={rows}
+              onSaved={loadGrid}
+            />
+          )}
 
           {needsReviewCount > 0 && (
             <div className="mb-4 rounded-xl border border-amber-300/60 bg-amber-50/60 px-5 py-3 text-sm text-amber-900">
