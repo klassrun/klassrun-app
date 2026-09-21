@@ -27,7 +27,9 @@ type EligibilityRow = {
   alreadyPromoted: boolean
   existingRecordId: string | null
 }
-type Verb = 'PROMOTE' | 'RETAIN'
+type Verb = 'PROMOTE' | 'RETAIN' | 'SKIP' // promotions-app-v1: SKIP = "Not this run" (not sent)
+// promotions-app-v1: a student with no scores is never silently retained
+const initialVerb = (s: EligibilityRow['suggestion']): Verb => (s === 'PROMOTE' ? 'PROMOTE' : s === 'RETAIN' ? 'RETAIN' : 'SKIP')
 type HistoryItem = {
   id: string
   decision: string
@@ -94,7 +96,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
     const list: EligibilityRow[] = data?.rows ?? []
     setRows(list)
     const init: Record<string, Verb> = {}
-    list.forEach((r) => { init[r.student.id] = r.suggestion === 'PROMOTE' ? 'PROMOTE' : 'RETAIN' })
+    list.forEach((r) => { init[r.student.id] = initialVerb(r.suggestion) })
     setDecisions(init)
     setLoaded(true)
     await loadHistory()
@@ -105,9 +107,17 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
   }
   function applySuggestions() {
     const next: Record<string, Verb> = {}
-    rows.forEach((r) => { next[r.student.id] = r.suggestion === 'PROMOTE' ? 'PROMOTE' : 'RETAIN' })
+    rows.forEach((r) => { next[r.student.id] = initialVerb(r.suggestion) })
     setDecisions(next)
     toast.success('Reset to suggestions')
+  }
+
+  // promotions-app-v1: department splits start from "everyone Not this run", then
+  // the admin picks the students going into THIS target class.
+  function setAllTo(verb: Verb) {
+    const next: Record<string, Verb> = {}
+    rows.forEach((r) => { next[r.student.id] = verb })
+    setDecisions(next)
   }
 
   const selectable = rows.filter((r) => !r.alreadyPromoted)
@@ -118,11 +128,14 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
   const needsNextSession = sessions.length < 2
   const toPromote = selectable.filter((r) => (decisions[r.student.id] ?? 'RETAIN') === 'PROMOTE')
   const toRetain = selectable.filter((r) => (decisions[r.student.id] ?? 'RETAIN') === 'RETAIN')
+  const toSkip = selectable.filter((r) => decisions[r.student.id] === 'SKIP') // promotions-app-v1
+  const skipCount = toSkip.length
 
   function openConfirm() { // promotion-confirm-v1
     if (!targetClassId) { toast.error('Pick a target class'); return }
     if (targetClassId === sourceClassId) { toast.error('Target class must differ from source'); return }
     if (selectable.length === 0) { toast.error('No students to promote (all already have a record)'); return }
+    if (toPromote.length + toRetain.length === 0) { toast.error('Nobody is set to Promote or Retain in this run'); return } // promotions-app-v1
     setConfirming(true)
   }
 
@@ -131,7 +144,8 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
     if (targetClassId === sourceClassId) { toast.error('Target class must differ from source'); return }
     if (selectable.length === 0) { toast.error('No students to promote (all already have a record)'); return }
 
-    const payloadDecisions = selectable.map((r) => ({
+    // promotions-app-v1: "Not this run" students are not sent - they stay undecided
+    const payloadDecisions = selectable.filter((r) => decisions[r.student.id] !== 'SKIP').map((r) => ({
       studentId: r.student.id,
       decision: decisions[r.student.id] ?? 'RETAIN',
     }))
@@ -246,10 +260,13 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
           <section className="mt-8">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                {rows.length === 0 ? 'No students' : `${rows.length} student${rows.length === 1 ? '' : 's'} · ${promoteCount} to promote · ${retainCount} to retain`}
+                {rows.length === 0 ? 'No students' : `${rows.length} student${rows.length === 1 ? '' : 's'} · ${promoteCount} to promote · ${retainCount} to retain${skipCount ? ` · ${skipCount} not in this run` : ''}`}
               </h2>
               {rows.length > 0 && (
-                <button type="button" onClick={applySuggestions} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Reset to suggestions</button>
+                <span className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setAllTo('SKIP')} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Set all to Not this run</button>
+                  <button type="button" onClick={applySuggestions} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Reset to suggestions</button>
+                </span>
               )}
             </div>
 
@@ -268,7 +285,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
                           <p className="truncate font-medium leading-tight">{fullName(r.student)}</p>
                           <p className="font-mono text-[11px] text-muted-foreground">
                             {r.student.admissionNumber}
-                            {r.termAverages.length > 0 ? ` · ${r.termAverages.map((t) => `${TERM_SHORT[t.term] ?? t.term} ${t.average}`).join(' · ')}` : ' · no results'}
+                            {r.termAverages.length > 0 ? ` · ${r.termAverages.map((t) => `${TERM_SHORT[t.term] ?? t.term} ${t.average}`).join(' · ')}` : ' · no scores recorded — joined late? Choose Promote or Retain'}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -282,6 +299,7 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
                             <div className="inline-flex overflow-hidden rounded-md border border-border">
                               <button type="button" onClick={() => setDecision(r.student.id, 'PROMOTE')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${verb === 'PROMOTE' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Promote</button>
                               <button type="button" onClick={() => setDecision(r.student.id, 'RETAIN')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${verb === 'RETAIN' ? 'bg-foreground text-background' : 'bg-background hover:bg-muted'}`}>Retain</button>
+                              <button type="button" onClick={() => setDecision(r.student.id, 'SKIP')} className={`px-3 py-1.5 text-xs font-medium transition-colors ${verb === 'SKIP' ? 'bg-muted text-foreground' : 'bg-background hover:bg-muted'}`}>Not this run</button>
                             </div>
                           )}
                         </div>
@@ -294,6 +312,11 @@ export function PromotionsClient({ classes, sessions }: { classes: ClassItem[]; 
                   <div className="mt-5 rounded-xl border border-primary/40 bg-primary/5 px-5 py-4"> {/* promotion-confirm-panel */}
                     <p className="text-sm font-medium">Confirm these outcomes before saving.</p>
                     <p className="mt-1 text-xs text-muted-foreground">Parents may see these results — check each name.</p>
+                    {toSkip.length > 0 && ( /* promotions-app-v1 */
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Not in this run ({toSkip.length}): {toSkip.map((r) => fullName(r.student)).join(', ')}. They stay undecided — promote them into another class in a separate run.
+                      </p>
+                    )}
                     <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <p className="text-[10px] uppercase tracking-wider text-primary">Promoting ({toPromote.length}) → {activeClasses.find((c) => c.id === targetClassId)?.name ?? '—'}</p>
