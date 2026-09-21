@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { BehaviourExcel } from './_components/behaviour-excel' // behaviour-bulk-app-v1
 
 type ClassItem = { id: string; name: string; archivedAt: string | null }
 type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean }
@@ -117,6 +118,18 @@ export function BehaviourClient({ classes, sessions }: { classes: ClassItem[]; s
       {loaded && (
         <section className="mt-8">
           <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{className} · {TERMS.find((t) => t.value === term)?.label}</h2>
+          {/* behaviour-bulk-app-v1 */}
+          {rows.length > 0 && (
+            <BehaviourExcel
+              classId={classId}
+              sessionId={sessionId}
+              term={term}
+              className={className}
+              attributes={attributes}
+              roster={rows}
+              onSaved={loadGrid}
+            />
+          )}
           {rows.length === 0 ? (
             <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
               {/* app-roster-states-v1: an empty PAST session is correct, not broken. Saying
