@@ -39,6 +39,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
   const [inviteEmail,     setInviteEmail]     = useState('')
   const [inviteRole,      setInviteRole]      = useState('TEACHER') // ops-4c-invite-role-ui
   const [inviting, setInviting] = useState(false)
+  const [shareLink, setShareLink] = useState<ShareLink | null>(null) // invite-link-app-v1
 
   // batch-3-phase-1-5-prop-sync
   // Sync local state when server-fetched props refresh.
@@ -85,7 +86,8 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
         return
       }
 
-      showSuccess(`Invite sent to ${inviteEmail}`)
+      showSuccess(`Invite created for ${inviteEmail}`)
+      if (data?.inviteLink) setShareLink({ name: `${inviteFirstName} ${inviteLastName}`.trim(), url: data.inviteLink, expiresAt: data.expiresAt }) // invite-link-app-v1
       setInviteFirstName('')
       setInviteLastName('')
       setInviteEmail('')
@@ -147,6 +149,26 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
     }
   }
 
+  // invite-link-app-v1: roll a fresh invite for someone who has not accepted yet, and show the link
+  async function handleNewLink(teacher: Teacher) {
+    if (!confirm(`Create a new invite link for ${teacher.firstName}? Any link sent before will stop working.`)) return
+    setActionInFlight(teacher.id)
+    try {
+      const res = await fetch(`/api/auth/invite/resend/${teacher.id}`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        showError(data?.error?.message || 'Could not create a new invite link')
+        return
+      }
+      if (data?.inviteLink) setShareLink({ name: `${teacher.firstName} ${teacher.lastName}`, url: data.inviteLink, expiresAt: data.expiresAt })
+      showSuccess(`New invite link ready for ${teacher.firstName}`)
+    } catch {
+      showError('Network error. Please try again.')
+    } finally {
+      setActionInFlight(null)
+    }
+  }
+
   async function handleResetPassword(teacher: Teacher) {
     if (!confirm(`Reset ${teacher.firstName}'s password? They'll receive an email with a link to set a new one. Their current password will stop working immediately.`)) {
       return
@@ -164,7 +186,9 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
         return
       }
 
-      showSuccess(`Password reset link sent to ${teacher.email}`)
+      const resetData = await res.json().catch(() => ({})) // invite-link-app-v1
+      showSuccess(`Password reset link created for ${teacher.email}`)
+      if (resetData?.inviteLink) setShareLink({ name: `${teacher.firstName} ${teacher.lastName}`, url: resetData.inviteLink, expiresAt: resetData.expiresAt })
       refreshList()
     } catch {
       showError('Network error. Please try again.')
@@ -188,6 +212,9 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
           {statusMessage.text}
         </div>
       )}
+
+      {/* invite-link-app-v1 */}
+      {shareLink && <InviteLinkPanel link={shareLink} onClose={() => setShareLink(null)} />}
 
       {/* Invite form */}
       <div className="mb-10 rounded-xl border bg-card p-6">
@@ -299,6 +326,7 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
                 onRevoke={() => handleRevoke(teacher)}
                 onReinstate={() => handleReinstate(teacher)}
                 onResetPassword={() => handleResetPassword(teacher)}
+                onNewLink={() => handleNewLink(teacher)}
               />
             ))}
           </div>
@@ -310,13 +338,14 @@ export function TeachersClient({ initialTeachers }: { initialTeachers: Teacher[]
 
 function TeacherRow({
   teacher, inFlight,
-  onRevoke, onReinstate, onResetPassword,
+  onRevoke, onReinstate, onResetPassword, onNewLink,
 }: {
   teacher: Teacher
   inFlight: boolean
   onRevoke: () => void
   onReinstate: () => void
   onResetPassword: () => void
+  onNewLink: () => void // invite-link-app-v1
 }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 hover:bg-muted/30 transition-colors">
@@ -359,6 +388,11 @@ function TeacherRow({
           </>
         )}
         {teacher.status === 'INVITED' && (
+          <Button size="sm" variant="ghost" disabled={inFlight} onClick={onNewLink} className="text-xs text-primary hover:bg-primary/10">
+            Get invite link
+          </Button>
+        )}
+        {teacher.status === 'INVITED' && (
           <span className="text-xs text-muted-foreground">
             Awaiting acceptance
           </span>
@@ -374,6 +408,64 @@ function TeacherRow({
             Reinstate
           </Button>
         )}
+      </div>
+    </div>
+  )
+}
+
+// invite-link-app-v1: the invite link, ready to copy or send on WhatsApp.
+type ShareLink = { name: string; url: string; expiresAt?: string }
+function InviteLinkPanel({ link, onClose }: { link: ShareLink; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+  const firstName = link.name.split(' ')[0] || 'there'
+  const message = `Hello ${firstName}, you have been invited to Klassrun. Open this link to set your password and sign in:\n${link.url}`
+  const expires = link.expiresAt
+    ? new Date(link.expiresAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      window.prompt('Copy this link:', link.url)
+    }
+  }
+
+  return (
+    <div className="mb-6 rounded-xl border border-primary/30 bg-primary/5 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">Invite link for {link.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Send it however works best. WhatsApp is usually fastest.{expires ? ` Valid until ${expires}.` : ''} Making a new link later cancels this one.
+          </p>
+        </div>
+        <button type="button" onClick={onClose} className="shrink-0 text-xs text-muted-foreground transition-colors hover:text-foreground">
+          Close
+        </button>
+      </div>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          readOnly
+          value={link.url}
+          onFocus={(e) => e.currentTarget.select()}
+          className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 font-mono text-xs"
+        />
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={copy}>
+            {copied ? 'Copied ✓' : 'Copy link'}
+          </Button>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-8 items-center rounded-md bg-[#25D366] px-3 text-xs font-medium text-white transition-opacity hover:opacity-90"
+          >
+            Send on WhatsApp
+          </a>
+        </div>
       </div>
     </div>
   )
