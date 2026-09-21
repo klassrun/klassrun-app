@@ -6,6 +6,7 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { UnplacedBanner } from './_components/unplaced-banner' // student-record-app-v1
 
 type ClassItem = { id: string; name: string; level: string | null; archivedAt: string | null }
 type Student = {
@@ -42,6 +43,7 @@ export function StudentsClient({
   const [editing, setEditing] = useState<Student | null>(null)
   const [archiving, setArchiving] = useState<Student | null>(null)
   const [loading, setLoading] = useState(false)
+  const [query, setQuery] = useState('') // student-record-app-v1
 
   const activeClasses = initialClasses.filter((c) => !c.archivedAt)
 
@@ -70,8 +72,19 @@ export function StudentsClient({
     await reload({ includeArchived: next })
   }
 
-  const active = students.filter((s) => !s.archivedAt)
-  const archived = students.filter((s) => !!s.archivedAt)
+  // student-record-app-v1: search by admission number or any part of the name.
+  // Typing also brings in students who have left, so no record is out of reach.
+  function onSearch(v: string) {
+    setQuery(v)
+    if (v.trim() && !showArchived) { setShowArchived(true); reload({ includeArchived: true }) }
+  }
+  const q = query.trim().toLowerCase()
+  const matches = (s: Student) => !q
+    || s.admissionNumber.toLowerCase().includes(q)
+    || `${s.firstName} ${s.middleName ?? ''} ${s.lastName}`.toLowerCase().includes(q)
+    || `${s.lastName} ${s.firstName}`.toLowerCase().includes(q)
+  const active = students.filter((s) => !s.archivedAt && matches(s))
+  const archived = students.filter((s) => !!s.archivedAt && matches(s))
 
   function classNameOf(s: Student): string {
     return s.class?.name ?? initialClasses.find((c) => c.id === s.classId)?.name ?? '—'
@@ -135,6 +148,13 @@ export function StudentsClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => onSearch(e.target.value)}
+              placeholder="Search name or admission no."
+              className="w-56 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+            />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Class
               <select
@@ -156,6 +176,7 @@ export function StudentsClient({
           </div>
         </div>
 
+        <UnplacedBanner onPlaced={async () => { await reload(); startTransition(() => router.refresh()) }} />
         {!canAdd && (
           <div className="mt-6 rounded-lg border border-amber-300/50 bg-amber-50/50 px-4 py-3 text-xs text-amber-700">
             Add a class first — students are enrolled into a class. Head to{' '}
@@ -203,13 +224,14 @@ export function StudentsClient({
                       </span>
                     )}
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{s.lastName} {s.firstName}{s.middleName ? ` ${s.middleName}` : ''}</p>
+                      <Link href={`/dashboard/students/${s.id}`} className="block truncate font-medium hover:text-primary hover:underline">{s.lastName} {s.firstName}{s.middleName ? ` ${s.middleName}` : ''}</Link>
                       <p className="text-xs text-muted-foreground">
                         <span className="font-mono">{s.admissionNumber}</span> · {classNameOf(s)}
                       </p>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <Link href={`/dashboard/students/${s.id}`} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Record</Link>
                     <button type="button" onClick={() => setEditing(s)} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Edit</button>
                     <button type="button" onClick={() => setArchiving(s)} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Archive</button>
                   </div>
@@ -229,7 +251,7 @@ export function StudentsClient({
                 {archived.map((s) => (
                   <div key={s.id} className="flex items-center justify-between px-6 py-4">
                     <div>
-                      <p className="font-medium">{s.lastName} {s.firstName}</p>
+                      <Link href={`/dashboard/students/${s.id}`} className="font-medium hover:text-primary hover:underline">{s.lastName} {s.firstName}</Link>
                       <p className="text-xs text-muted-foreground"><span className="font-mono">{s.admissionNumber}</span> · {classNameOf(s)}</p>
                     </div>
                     <button type="button" onClick={() => handleRestore(s)} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Restore</button>
