@@ -13,6 +13,7 @@ import { AdminDashboard } from './_components/admin-dashboard'
 import { TeacherDashboard } from './_components/teacher-dashboard'
 import { BursarDashboard } from './_components/bursar-dashboard'
 import { SubscriptionBanner } from './_components/subscription-banner' // b2-banner-import
+import { lockedTiers, type Entitlements } from '@/lib/entitlements' // entitlements-app-v1
 
 type MeResponse = {
   user: {
@@ -86,6 +87,9 @@ export default async function DashboardPage() {
   // For TEACHER we don't strictly need it, but the call is cheap and the
   // teacher dashboard may use it for the sidebar. Fetch once, pass through.
   const schoolData = await getSchool(token)
+  // entitlements-app-v1: features this school's plan lacks (empty until enforced)
+  const entResult = await apiFetch<Entitlements>('/api/billing/entitlements', { token })
+  const locked = lockedTiers(entResult.ok ? (entResult.data ?? null) : null)
 
   if (user.role === 'TEACHER') {
     // batch-2c-phase-4a-teacher-dashboard-fetch
@@ -109,6 +113,7 @@ export default async function DashboardPage() {
         assignments={assignmentsResult.data?.assignments ?? []}
         totalSubjects={assignmentsResult.data?.totalSubjects ?? 0}
         totalClasses={assignmentsResult.data?.totalClasses ?? 0}
+        locked={locked}
       />
     )
   }
@@ -128,6 +133,7 @@ export default async function DashboardPage() {
         school={schoolData?.school ?? null}
         teacherCount={schoolData?.teacherCount ?? 0}
         usage={usage}
+        locked={locked}
       />
     </>
   )

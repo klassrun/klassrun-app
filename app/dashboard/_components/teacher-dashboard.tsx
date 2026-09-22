@@ -7,6 +7,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ClassTeacherNav } from './class-teacher-nav' // classteacher-app-v1
+import { TierTag } from './tier-tag' // entitlements-app-v1
 
 type Me = {
   id: string
@@ -40,11 +41,13 @@ export function TeacherDashboard({
   assignments,
   totalSubjects,
   totalClasses,
+  locked = {},
 }: {
   me: Me
   assignments: Assignment[]
   totalSubjects: number
   totalClasses: number
+  locked?: Record<string, string>
 }) {
   const schoolName = me.school?.name ?? 'Your school'
   const session    = me.school?.currentSession
@@ -230,7 +233,7 @@ export function TeacherDashboard({
         <div className="flex items-start gap-4">
           <span className="editorial-number text-3xl text-primary">02b</span>
           <div className="flex-1">
-            <h3 className="font-display text-lg font-medium leading-tight tracking-tight">Upload your Scheme of Work</h3>
+            <h3 className="font-display text-lg font-medium leading-tight tracking-tight">Upload your Scheme of Work<TierTag tier={locked.SCHEME_UPLOAD} /></h3>
             <p className="mt-1 text-sm text-muted-foreground">Already have a scheme from the ministry? Upload it and generate lesson notes aligned to it.</p>
           </div>
         </div>
@@ -240,7 +243,7 @@ export function TeacherDashboard({
                 <div className="flex items-start gap-4">
                   <span className="editorial-number text-3xl text-primary">03</span>
                   <div className="flex-1">
-                    <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Exam Questions</h3>
+                    <h3 className="font-display text-lg font-medium leading-tight tracking-tight">AI Exam Questions<TierTag tier={locked.AI_EXAMS} /></h3>
                     <p className="mt-1 text-sm text-muted-foreground">Generate WAEC/NECO-style questions for any topic. Objective, theory, or essay.</p>
                   </div>
                 </div>
@@ -256,7 +259,7 @@ export function TeacherDashboard({
               className="flex items-center justify-between rounded-xl border bg-card px-6 py-4 hover:bg-muted/40 transition-colors"
             >
               <div>
-                <p className="text-sm font-medium">Browse question bank</p>
+                <p className="text-sm font-medium">Browse question bank<TierTag tier={locked.QUESTION_BANK} /></p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Every question your school has generated — growing each term.
                 </p>

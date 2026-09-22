@@ -6,6 +6,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { UsageStrip, type UsageData } from './usage-strip' // batch-6-usage-strip-wire
+import { TierTag } from './tier-tag' // entitlements-app-v1
 
 type SchoolWithCounts = {
   id: string
@@ -41,11 +42,13 @@ export function AdminDashboard({
   school,
   teacherCount,
   usage,
+  locked = {},
 }: {
   me: Me
   school: SchoolWithCounts | null
   teacherCount: number
   usage: UsageData
+  locked?: Record<string, string>
 }) {
   const schoolName = me.school?.name ?? school?.name ?? 'Your school'
   const session    = me.school?.currentSession ?? school?.sessions?.[0] ?? null
@@ -177,7 +180,7 @@ export function AdminDashboard({
                   href="/dashboard/assessments"
                   className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
                 >
-                  Exam questions
+                  Exam questions<TierTag tier={locked.AI_EXAMS} />
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -188,7 +191,7 @@ export function AdminDashboard({
                   href="/dashboard/question-bank"
                   className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary"
                 >
-                  Question bank
+                  Question bank<TierTag tier={locked.QUESTION_BANK} />
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
@@ -233,13 +236,13 @@ export function AdminDashboard({
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>
                 <Link href="/dashboard/fees" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
-                  Fees
+                  Fees<TierTag tier={locked.FEES} />
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>
                 {/* ops-4-admin-nav */}
                 {/* ops-3-admin-nav */}
                 <Link href="/dashboard/report-cards/comments" className="flex items-center gap-1 text-xs font-medium text-foreground transition-colors hover:text-primary">
-                  Report-card comments
+                  Report-card comments<TierTag tier={locked.AI_COMMENTS} />
                   <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>
               </div>
