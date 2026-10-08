@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 import type { ReportCardListItem } from './page'
 
 type ClassItem = { id: string; name: string; archivedAt: string | null }
-type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean }
+type SessionItem = { id: string; name: string; currentTerm: 'FIRST' | 'SECOND' | 'THIRD'; isCurrent: boolean; nextTermBeginsByTerm?: Record<string, string> | null } // rc-next-term-app-v1
 
 const TERMS: Array<{ value: 'FIRST' | 'SECOND' | 'THIRD'; label: string }> = [
   { value: 'FIRST', label: 'First Term' },
@@ -17,6 +17,19 @@ const TERMS: Array<{ value: 'FIRST' | 'SECOND' | 'THIRD'; label: string }> = [
   { value: 'THIRD', label: 'Third Term' },
 ]
 const TERM_LABEL: Record<string, string> = { FIRST: 'First Term', SECOND: 'Second Term', THIRD: 'Third Term' }
+
+// rc-next-term-app-v1: 'YYYY-MM-DD' → 'Tuesday, 12 January 2027' — the same wording the card prints.
+const NT_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const NT_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+function formatLongDate(v: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  if (!m) return v
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return `${NT_DAYS[d.getUTCDay()]}, ${Number(m[3])} ${NT_MONTHS[Number(m[2]) - 1]} ${m[1]}`
+}
+// Only a complete, sensible date is saved: typing a year on a desktop passes
+// through 0002, 0020, 0202… before 2027 — none of those may reach the server.
+const isSaveableDate = (v: string) => /^(20\d\d|2100)-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v)
 
 export function ReportCardsClient({
   classes,
@@ -36,6 +49,13 @@ export function ReportCardsClient({
   const [term, setTerm] = useState<'FIRST' | 'SECOND' | 'THIRD'>(currentSession?.currentTerm ?? 'FIRST')
   const [generating, setGenerating] = useState(false)
   const [printing, setPrinting] = useState(false) // rc-class-pdf-app-v1
+  // rc-next-term-app-v1: { [sessionId]: { FIRST: "2027-01-12", ... } }, seeded from the sessions list
+  const [nextTermBySession, setNextTermBySession] = useState<Record<string, Record<string, string>>>(
+    () => Object.fromEntries(sessions.map((s) => [s.id, { ...(s.nextTermBeginsByTerm ?? {}) }]))
+  )
+  const [nextTermSaving, setNextTermSaving] = useState(false)
+  const nextTermDate = nextTermBySession[sessionId]?.[term] ?? ''
+  const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? 'this session'
   const [cards, setCards] = useState<ReportCardListItem[]>(initialCards)
 
   async function reloadList() {
@@ -110,6 +130,33 @@ export function ReportCardsClient({
     startTransition(() => router.refresh())
   }
 
+  // rc-next-term-app-v1: save (or clear, with null) the date for the session + term on screen.
+  // Captures both before awaiting, so switching the pickers mid-save cannot misfile it.
+  async function saveNextTerm(date: string | null) {
+    if (!sessionId) return
+    const sid = sessionId
+    const t = term
+    setNextTermSaving(true)
+    const res = await fetch(`/api/sessions/${encodeURIComponent(sid)}/next-term-begins`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: t, date }),
+    })
+    setNextTermSaving(false)
+    if (!res.ok) {
+      const b = await res.json().catch(() => null)
+      toast.error(b?.error?.message || 'Could not save the date. Check your connection and pick it again.')
+      return
+    }
+    setNextTermBySession((prev) => {
+      const cur = { ...(prev[sid] ?? {}) }
+      if (date) cur[t] = date
+      else delete cur[t]
+      return { ...prev, [sid]: cur }
+    })
+    toast.success(date ? `Saved — cards will say: Next term begins ${formatLongDate(date)}` : 'Removed — cards will leave this line off')
+  }
+
   return (
     <div className="min-h-screen bg-paper text-foreground">
       <header className="border-b border-border bg-card/60">
@@ -154,11 +201,43 @@ export function ReportCardsClient({
               </button>
             </div>
           </div>
+          {/* rc-next-term-app-v1: Next term begins */}
+          <div className="mt-5 rounded-lg border border-border bg-background/60 p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <label className="block text-sm font-medium text-foreground">
+                Next term begins
+                <span className="mt-0.5 block text-xs font-normal leading-relaxed text-muted-foreground">
+                  Printed on every {TERM_LABEL[term]} card for {sessionName}. Set it once — every class uses it.
+                  {term === 'THIRD' ? ' On Third Term cards this is usually when the next session starts.' : ''}
+                </span>
+                <input
+                  key={`${sessionId}:${term}:${nextTermDate}`}
+                  type="date"
+                  defaultValue={nextTermDate}
+                  disabled={!sessionId || nextTermSaving}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    if (isSaveableDate(v) && v !== nextTermDate) void saveNextTerm(v)
+                  }}
+                  className="mt-2 block w-full max-w-[220px] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground disabled:opacity-60"
+                />
+              </label>
+              {nextTermDate && (
+                <button type="button" onClick={() => void saveNextTerm(null)} disabled={nextTermSaving} className="text-xs font-medium text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50">
+                  Remove
+                </button>
+              )}
+            </div>
+            <p className={`mt-2 text-xs ${nextTermDate ? 'text-primary' : 'text-amber-700'}`}>
+              {nextTermSaving ? 'Saving…' : nextTermDate ? `✓ Saved — cards will say: Next term begins ${formatLongDate(nextTermDate)}` : 'Not set — cards will leave this line off.'}
+            </p>
+          </div>
           {/* rc-class-pdf-app-v1: Print class */}
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
             <p className="max-w-lg text-xs leading-relaxed text-muted-foreground">
               Regenerating overwrites the snapshot for that class &amp; term. Locked cards are protected.
               {' '}<span className="font-medium text-foreground">Print class</span> refreshes the cards first, then opens one PDF with a page per student.
+              {!nextTermDate && <span className="mt-1 block font-medium text-amber-700">Next term begins isn&apos;t set for {TERM_LABEL[term]} — cards will print without it. {/* rc-next-term-app-v1 */}</span>}
             </p>
             <button type="button" onClick={printClass} disabled={printing || generating || !classId || !sessionId} className="shrink-0 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors">
               {printing ? 'Refreshing cards…' : 'Print class'}
