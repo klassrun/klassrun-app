@@ -35,6 +35,7 @@ export function ReportCardsClient({
   const [sessionId, setSessionId] = useState<string>(currentSession?.id ?? '')
   const [term, setTerm] = useState<'FIRST' | 'SECOND' | 'THIRD'>(currentSession?.currentTerm ?? 'FIRST')
   const [generating, setGenerating] = useState(false)
+  const [printing, setPrinting] = useState(false) // rc-class-pdf-app-v1
   const [cards, setCards] = useState<ReportCardListItem[]>(initialCards)
 
   async function reloadList() {
@@ -61,6 +62,50 @@ export function ReportCardsClient({
     }
     const data = await res.json().catch(() => null)
     toast.success(`Generated ${data?.count ?? 0} report card${data?.count === 1 ? '' : 's'}`)
+    await reloadList()
+    startTransition(() => router.refresh())
+  }
+
+  // rc-class-pdf-app-v1: refresh every unlocked card (same as Generate), then open
+  // ONE PDF for the class — a page per student — in a new tab, ready to print.
+  // The tab is opened inside the click so pop-up blockers allow it; it fills in
+  // once the cards are refreshed. If pop-ups are blocked, the file downloads instead.
+  async function printClass() {
+    if (!classId) { toast.error('Pick a class'); return }
+    if (!sessionId) { toast.error('Pick a session'); return }
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.title = 'Preparing report cards…'
+      win.document.body.innerHTML = '<p style="font-family:system-ui,sans-serif;padding:48px 24px;color:#131b26">Preparing report cards… the PDF opens here in a moment.</p>'
+    }
+    setPrinting(true)
+    const res = await fetch('/api/report-cards/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, sessionId, term }),
+    })
+    if (!res.ok) {
+      const b = await res.json().catch(() => null)
+      win?.close()
+      setPrinting(false)
+      toast.error(b?.error?.message || 'Could not refresh the report cards')
+      return
+    }
+    const data = await res.json().catch(() => null)
+    const url = `/api/report-cards/class-pdf?${new URLSearchParams({ classId, sessionId, term }).toString()}`
+    if (win) {
+      win.location.href = url
+    } else {
+      const a = document.createElement('a')
+      a.href = url
+      a.download = ''
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+    const n = Number(data?.count ?? 0)
+    toast.success(`Opening ${n} report card${n === 1 ? '' : 's'} — print from the new tab`)
+    setPrinting(false)
     await reloadList()
     startTransition(() => router.refresh())
   }
@@ -104,14 +149,21 @@ export function ReportCardsClient({
               </select>
             </label>
             <div className="flex items-end">
-              <button type="button" onClick={generate} disabled={generating || !classId || !sessionId} className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
+              <button type="button" onClick={generate} disabled={generating || printing || !classId || !sessionId} className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors">
                 {generating ? 'Generating…' : 'Generate'}
               </button>
             </div>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Regenerating overwrites the snapshot for that class &amp; term. Locked cards are protected.
-          </p>
+          {/* rc-class-pdf-app-v1: Print class */}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="max-w-lg text-xs leading-relaxed text-muted-foreground">
+              Regenerating overwrites the snapshot for that class &amp; term. Locked cards are protected.
+              {' '}<span className="font-medium text-foreground">Print class</span> refreshes the cards first, then opens one PDF with a page per student.
+            </p>
+            <button type="button" onClick={printClass} disabled={printing || generating || !classId || !sessionId} className="shrink-0 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors">
+              {printing ? 'Refreshing cards…' : 'Print class'}
+            </button>
+          </div>
         </div>
 
         <section className="mt-10">
