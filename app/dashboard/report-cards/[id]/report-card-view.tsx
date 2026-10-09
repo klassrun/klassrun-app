@@ -147,6 +147,22 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
     router.refresh()
   }
 
+  // rc-lock-class-app-v1: undo a lock (admin only; recorded in the audit log).
+  async function unlockCard() {
+    if (!window.confirm('Unlock this report card?\n\nIt will refresh from the latest scores, attendance, behaviour, comments and date the next time you generate or print.')) return
+    setLockBusy(true)
+    const res = await fetch(`/api/report-cards/${card.id}/unlock`, { method: 'POST' })
+    setLockBusy(false)
+    if (!res.ok) {
+      const b = await res.json().catch(() => null)
+      toast.error(b?.error?.message || 'Could not unlock report card')
+      return
+    }
+    setLockedAt(null)
+    toast.success('Report card unlocked')
+    router.refresh()
+  }
+
   return (
     <div className="min-h-screen bg-paper text-foreground">
       <header className="border-b border-border bg-card/60">
@@ -157,8 +173,16 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
             <button type="button" onClick={renderPdf} disabled={pdfBusy} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50">
               {pdfBusy ? (pdfStage === 'refreshing' ? 'Refreshing…' : 'Rendering…') : pdfUrl ? 'Re-render PDF' : 'Render PDF'}
             </button>
-            <button type="button" onClick={lockCard} disabled={lockBusy || locked} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
-              {locked ? 'Locked' : lockBusy ? 'Locking…' : 'Lock'}
+            {/* rc-lock-class-app-v1: Lock ⇄ Unlock */}
+            <button
+              type="button"
+              onClick={locked ? unlockCard : lockCard}
+              disabled={lockBusy}
+              className={locked
+                ? 'rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50'
+                : 'rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50'}
+            >
+              {lockBusy ? (locked ? 'Unlocking…' : 'Locking…') : locked ? 'Unlock' : 'Lock'}
             </button>
           </div>
         </div>

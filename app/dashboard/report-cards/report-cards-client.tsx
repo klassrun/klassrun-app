@@ -49,6 +49,7 @@ export function ReportCardsClient({
   const [term, setTerm] = useState<'FIRST' | 'SECOND' | 'THIRD'>(currentSession?.currentTerm ?? 'FIRST')
   const [generating, setGenerating] = useState(false)
   const [printing, setPrinting] = useState(false) // rc-class-pdf-app-v1
+  const [locking, setLocking] = useState(false) // rc-lock-class-app-v1
   // rc-next-term-app-v1: { [sessionId]: { FIRST: "2027-01-12", ... } }, seeded from the sessions list
   const [nextTermBySession, setNextTermBySession] = useState<Record<string, Record<string, string>>>(
     () => Object.fromEntries(sessions.map((s) => [s.id, { ...(s.nextTermBeginsByTerm ?? {}) }]))
@@ -157,6 +158,38 @@ export function ReportCardsClient({
     toast.success(date ? `Saved — cards will say: Next term begins ${formatLongDate(date)}` : 'Removed — cards will leave this line off')
   }
 
+  // rc-lock-class-app-v1: lock / unlock every card of the class + session + term on screen.
+  // Asks first in plain words, then says exactly what it did.
+  async function setClassLock(lock: boolean) {
+    if (!classId || !sessionId) return
+    const className = classes.find((c) => c.id === classId)?.name ?? 'this class'
+    const what = `${className} · ${TERM_LABEL[term]} · ${sessionName}`
+    const question = lock
+      ? `Lock every ${what} report card?\n\nLocked cards stay exactly as they are — Generate, Print class and Re-render PDF will not change them until you unlock.`
+      : `Unlock every ${what} report card?\n\nThey will refresh from the latest scores, attendance, behaviour, comments and date the next time you generate or print.`
+    if (!window.confirm(question)) return
+    setLocking(true)
+    const res = await fetch(`/api/report-cards/${lock ? 'lock-class' : 'unlock-class'}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, sessionId, term }),
+    })
+    setLocking(false)
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      toast.error(data?.error?.message || (lock ? 'Could not lock the class' : 'Could not unlock the class'))
+      return
+    }
+    const n = Number(data?.changed ?? 0)
+    const rest = Number(data?.unchanged ?? 0)
+    const s = (k: number) => (k === 1 ? '' : 's')
+    toast.success(lock
+      ? `Locked ${n} card${s(n)}${rest ? ` (${rest} already locked)` : ''}`
+      : `Unlocked ${n} card${s(n)}${rest ? ` (${rest} ${rest === 1 ? "wasn't" : "weren't"} locked)` : ''}`)
+    await reloadList()
+    startTransition(() => router.refresh())
+  }
+
   return (
     <div className="min-h-screen bg-paper text-foreground">
       <header className="border-b border-border bg-card/60">
@@ -239,9 +272,20 @@ export function ReportCardsClient({
               {' '}<span className="font-medium text-foreground">Print class</span> refreshes the cards first, then opens one PDF with a page per student.
               {!nextTermDate && <span className="mt-1 block font-medium text-amber-700">Next term begins isn&apos;t set for {TERM_LABEL[term]} — cards will print without it. {/* rc-next-term-app-v1 */}</span>}
             </p>
-            <button type="button" onClick={printClass} disabled={printing || generating || !classId || !sessionId} className="shrink-0 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors">
-              {printing ? 'Refreshing cards…' : 'Print class'}
-            </button>
+            {/* rc-lock-class-app-v1: Print class · Lock class, with a quiet Unlock class link */}
+            <div className="flex shrink-0 flex-col items-end gap-1.5">
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={printClass} disabled={printing || generating || locking || !classId || !sessionId} className="shrink-0 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors">
+                  {printing ? 'Refreshing cards…' : 'Print class'}
+                </button>
+                <button type="button" onClick={() => void setClassLock(true)} disabled={locking || printing || generating || !classId || !sessionId} className="shrink-0 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 transition-colors">
+                  {locking ? 'Working…' : 'Lock class'}
+                </button>
+              </div>
+              <button type="button" onClick={() => void setClassLock(false)} disabled={locking || printing || generating || !classId || !sessionId} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50">
+                Unlock class…
+              </button>
+            </div>
           </div>
         </div>
 
