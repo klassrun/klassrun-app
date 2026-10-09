@@ -2,7 +2,7 @@
 // app/dashboard/report-cards/report-cards-client.tsx
 // ops-1b-reportcards-client
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react' // rc-bank-view-app-v1
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -58,13 +58,32 @@ export function ReportCardsClient({
   const nextTermDate = nextTermBySession[sessionId]?.[term] ?? ''
   const sessionName = sessions.find((s) => s.id === sessionId)?.name ?? 'this session'
   const [cards, setCards] = useState<ReportCardListItem[]>(initialCards)
+  // rc-bank-view-app-v1: the list follows the pickers; a request id drops slow, outdated replies
+  const [listLoading, setListLoading] = useState(true)
+  const listRequest = useRef(0)
+  const listWhat = `${classes.find((c) => c.id === classId)?.name ?? 'This class'} · ${TERM_LABEL[term]} · ${sessionName}`
+  const lockedCount = cards.filter((c) => c.lockedAt).length
+  const pdfCount = cards.filter((c) => c.pdfUrl).length
 
+  // rc-bank-view-app-v1: exactly the class + session + term picked above, A–Z by surname
+  // (the same order as the printed class PDF). Past sessions come back as they were —
+  // the API resolves the class through Enrollment, leavers included.
   async function reloadList() {
-    const res = await fetch('/api/report-cards', { cache: 'no-store' })
-    if (!res.ok) return
+    if (!classId || !sessionId) { setCards([]); setListLoading(false); return }
+    const id = ++listRequest.current
+    setListLoading(true)
+    const params = new URLSearchParams({ classId, sessionId, term })
+    const res = await fetch(`/api/report-cards?${params.toString()}`, { cache: 'no-store' }).catch(() => null)
+    if (id !== listRequest.current) return
+    if (!res || !res.ok) { setListLoading(false); toast.error('Could not load report cards'); return }
     const data = await res.json().catch(() => null)
-    if (data?.reportCards) setCards(data.reportCards)
+    if (id !== listRequest.current) return
+    const list: ReportCardListItem[] = Array.isArray(data?.reportCards) ? data.reportCards : []
+    list.sort((a, b) => a.student.lastName.localeCompare(b.student.lastName) || a.student.firstName.localeCompare(b.student.firstName))
+    setCards(list)
+    setListLoading(false)
   }
+  useEffect(() => { void reloadList() }, [classId, sessionId, term])
 
   async function generate() {
     if (!classId) { toast.error('Pick a class'); return }
@@ -290,12 +309,18 @@ export function ReportCardsClient({
         </div>
 
         <section className="mt-10">
+          {/* rc-bank-view-app-v1: exactly the class + session + term picked above */}
           <h2 className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            {cards.length === 0 ? 'No report cards yet' : cards.length === 1 ? '1 report card' : `${cards.length} report cards`}
+            {listWhat}
+            {listLoading ? ' — loading…' : cards.length === 0 ? '' : ` — ${cards.length} report card${cards.length === 1 ? '' : 's'}${lockedCount ? ` · ${lockedCount} locked` : ''}${pdfCount ? ` · ${pdfCount} with PDF` : ''}`}
           </h2>
-          {cards.length === 0 ? (
+          {listLoading && cards.length === 0 ? (
             <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
-              Generate a class above to see report cards here.
+              Loading report cards…
+            </div>
+          ) : cards.length === 0 ? (
+            <div className="rounded-xl border bg-card px-6 py-10 text-center text-sm text-muted-foreground">
+              No report cards for {listWhat} yet. Generate them above.
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border bg-card divide-y">

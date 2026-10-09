@@ -31,10 +31,11 @@ export default async function ReportCardsPage() {
   if (role === 'SUPER_ADMIN') redirect('/admin')
   if (role !== 'SCHOOL_ADMIN') redirect('/dashboard')
 
-  const [classesResult, sessionsResult, cardsResult] = await Promise.all([
+  // rc-bank-view-app-v1: no longer downloads every card the school has ever made — the
+  // list loads ONE class + session + term in the browser, following the pickers.
+  const [classesResult, sessionsResult] = await Promise.all([
     apiFetch<{ classes: ClassItem[] }>('/api/classes', { token }),
     apiFetch<unknown>('/api/sessions', { token }),
-    apiFetch<{ reportCards: ReportCardListItem[] }>('/api/report-cards', { token }),
   ])
 
   const classes = (classesResult.ok ? (classesResult.data?.classes ?? []) : []).filter((c) => !c.archivedAt)
@@ -42,7 +43,7 @@ export default async function ReportCardsPage() {
   const sessions: SessionItem[] = Array.isArray(rawSessions)
     ? (rawSessions as SessionItem[])
     : (((rawSessions as { sessions?: SessionItem[] } | null)?.sessions) ?? [])
-  const cards = cardsResult.ok ? (cardsResult.data?.reportCards ?? []) : []
+  const cards: ReportCardListItem[] = [] // rc-bank-view-app-v1
 
   return <ReportCardsClient classes={classes} sessions={sessions} initialCards={cards} />
 }
