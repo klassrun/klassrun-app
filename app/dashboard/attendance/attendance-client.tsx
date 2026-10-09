@@ -2,9 +2,9 @@
 // app/dashboard/attendance/attendance-client.tsx
 // ops-2b-attendance-client
 //
-// Admin attendance entry grid. schoolOpened / present / absent per student per
-// term. The server validates (present<=opened, absent<=opened). After entry,
-// re-generate the class's report cards to fold these figures into each snapshot.
+// Admin attendance entry grid. att-sanity-app-v1: you type days opened and days
+// present; days absent is worked out (opened − present) so the three can't disagree.
+// A blank Present means "not entered" — never 0 — and Save all skips those rows.
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -21,8 +21,10 @@ type GridRow = {
   absent: number
   hasEntry: boolean
 }
-type EditRow = GridRow & { saving: boolean; dirty: boolean }
-type Field = 'schoolOpened' | 'present' | 'absent'
+// att-sanity-app-v1: present is null until typed ("not entered"). Absent is never kept here —
+// it is always worked out as schoolOpened − present. needsCheck flags a saved row that didn't add up.
+type EditRow = { student: GridRow['student']; schoolOpened: number; present: number | null; hasEntry: boolean; saving: boolean; dirty: boolean; needsCheck: boolean }
+type Field = 'schoolOpened' | 'present'
 
 const TERMS: Array<{ value: 'FIRST' | 'SECOND' | 'THIRD'; label: string }> = [
   { value: 'FIRST', label: 'First Term' },
@@ -55,7 +57,20 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
     if (!res.ok) { const b = await res.json().catch(() => null); toast.error(b?.error?.message || 'Could not load roster'); return }
     const data = await res.json().catch(() => null)
     if (!data?.rows) { toast.error('Unexpected response'); return }
-    const loadedRows: EditRow[] = (data.rows as GridRow[]).map((r) => ({ ...r, saving: false, dirty: false }))
+    // att-sanity-app-v1: a never-saved row starts with Present blank, not 0. A saved row whose
+    // numbers don't add up (the old fill-down "56, 0, 0") is flagged and its Present cleared.
+    const loadedRows: EditRow[] = (data.rows as GridRow[]).map((r) => {
+      const addsUp = r.present + r.absent === r.schoolOpened
+      return {
+        student: r.student,
+        schoolOpened: r.schoolOpened,
+        present: r.hasEntry && addsUp ? r.present : null,
+        hasEntry: r.hasEntry,
+        saving: false,
+        dirty: false,
+        needsCheck: r.hasEntry && !addsUp,
+      }
+    })
     setRows(loadedRows)
     // attendance-bulk-v1: seed the shared box from whatever is already saved, so
     // re-opening a term you already entered does not show it blank.
@@ -71,19 +86,28 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
     return n
   }
   function setField(studentId: string, field: Field, raw: string) {
-    setRows((prev) => prev.map((r) => (r.student.id === studentId ? { ...r, [field]: toInt(raw), dirty: true } : r)))
+    setRows((prev) => prev.map((r) => {
+      if (r.student.id !== studentId) return r
+      if (field === 'present') {
+        // att-sanity-app-v1: an empty box means "not entered", never 0
+        const v = raw.trim() === '' ? null : toInt(raw)
+        return { ...r, present: v, dirty: true, needsCheck: v === null ? r.needsCheck : false }
+      }
+      return { ...r, schoolOpened: toInt(raw), dirty: true }
+    }))
   }
 
   async function saveRow(studentId: string) {
     const row = rows.find((r) => r.student.id === studentId)
     if (!row) return
-    if (row.present > row.schoolOpened) { toast.error('Present cannot exceed days opened'); return }
-    if (row.absent > row.schoolOpened) { toast.error('Absent cannot exceed days opened'); return }
+    if (row.present === null) { toast.error('Enter the days present first'); return } // att-sanity-app-v1
+    if (row.present > row.schoolOpened) { toast.error('Days present cannot be more than days opened'); return }
+    const present = row.present
     setRows((prev) => prev.map((r) => (r.student.id === studentId ? { ...r, saving: true } : r)))
     const res = await fetch('/api/attendance', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId, sessionId, term, schoolOpened: row.schoolOpened, present: row.present, absent: row.absent }),
+      body: JSON.stringify({ studentId, sessionId, term, schoolOpened: row.schoolOpened, present, absent: row.schoolOpened - present }), // att-sanity-app-v1
     })
     if (!res.ok) {
       const b = await res.json().catch(() => null)
@@ -111,11 +135,18 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
   // A row that fails stays marked unsaved, so pressing Save all again retries
   // only the failures.
   async function saveAll() {
-    const pending = rows.filter((r) => r.dirty)
-    if (pending.length === 0) { toast.error('Nothing to save'); return }
-    const invalid = pending.filter((r) => r.present > r.schoolOpened || r.absent > r.schoolOpened)
+    // att-sanity-app-v1: rows with no Days present are skipped — never sent as 0
+    const dirty = rows.filter((r) => r.dirty)
+    if (dirty.length === 0) { toast.error('Nothing to save'); return }
+    const waiting = dirty.filter((r) => r.present === null).length
+    const pending = dirty.flatMap((r) => (r.present === null ? [] : [{ ...r, present: r.present }]))
+    if (pending.length === 0) {
+      toast.error(`${waiting} row${waiting === 1 ? ' has' : 's have'} no days present yet — nothing saved. Type each student's days present, then Save all.`)
+      return
+    }
+    const invalid = pending.filter((r) => r.present > r.schoolOpened)
     if (invalid.length > 0) {
-      toast.error(`${invalid.length} row${invalid.length === 1 ? ' has' : 's have'} present or absent above days opened. Fix those first.`)
+      toast.error(`${invalid.length} row${invalid.length === 1 ? ' has' : 's have'} more days present than days opened. Fix those first.`)
       return
     }
     setSavingAll(true)
@@ -127,7 +158,7 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
         const res = await fetch('/api/attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ studentId: row.student.id, sessionId, term, schoolOpened: row.schoolOpened, present: row.present, absent: row.absent }),
+          body: JSON.stringify({ studentId: row.student.id, sessionId, term, schoolOpened: row.schoolOpened, present: row.present, absent: row.schoolOpened - row.present }), // att-sanity-app-v1
         })
         if (res.ok) {
           setRows((prev) => prev.map((r) => (r.student.id === row.student.id ? { ...r, hasEntry: true, dirty: false } : r)))
@@ -142,7 +173,7 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
     setSavingAll(false)
     setProgress(null)
     if (failed.length === 0) {
-      toast.success(`Saved ${pending.length} student${pending.length === 1 ? '' : 's'}`)
+      toast.success(`Saved ${pending.length} student${pending.length === 1 ? '' : 's'}${waiting ? ` · ${waiting} not saved yet (no days present)` : ''}`) // att-sanity-app-v1
     } else {
       toast.error(`${failed.length} could not be saved: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}. Still marked unsaved — press Save all again to retry just those.`)
     }
@@ -227,7 +258,7 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
                   <th className="px-4 py-3 font-medium">Student</th>
                   <th className="px-2 py-3 text-center font-medium">Days opened</th>
                   <th className="px-2 py-3 text-center font-medium">Present</th>
-                  <th className="px-2 py-3 text-center font-medium">Absent</th>
+                  <th className="px-2 py-3 text-center font-medium" title="Worked out: days opened − days present">Absent <span className="font-normal normal-case">(auto)</span></th>
                   <th className="px-3 py-3 text-right font-medium"></th>
                 </tr></thead>
                 <tbody className="divide-y">
@@ -235,16 +266,20 @@ export function AttendanceClient({ classes, sessions }: { classes: ClassItem[]; 
                     <tr key={r.student.id} className={r.student.archivedAt ? 'opacity-60 hover:bg-muted/20' : 'hover:bg-muted/20'}> {/* app-roster-states-v1 */}
                       <td className="px-4 py-2.5"><p className="font-medium leading-tight">{r.student.lastName} {r.student.firstName}{r.student.archivedAt ? <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground align-middle">Left</span> : null}</p><p className="font-mono text-[11px] text-muted-foreground">{r.student.admissionNumber}</p></td>
                       <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.schoolOpened} onChange={(e) => setField(r.student.id, 'schoolOpened', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
-                      <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.present} onChange={(e) => setField(r.student.id, 'present', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
-                      <td className="px-2 py-2.5 text-center"><input type="number" min={0} value={r.absent} onChange={(e) => setField(r.student.id, 'absent', e.target.value)} className="w-20 rounded-md border border-border bg-background px-2 py-1 text-center text-sm" /></td>
-                      <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => saveRow(r.student.id)} disabled={r.saving || savingAll} className={['rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50', r.dirty ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border bg-background hover:bg-muted'].join(' ')}>{r.saving ? 'Saving…' : r.hasEntry && !r.dirty ? 'Saved' : 'Save'}</button></td>
+                      <td className="px-2 py-2.5 text-center">
+                        {/* att-sanity-app-v1: blank = not entered; red above days opened; amber when a saved row didn't add up */}
+                        <input type="number" min={0} value={r.present ?? ''} placeholder="—" onChange={(e) => setField(r.student.id, 'present', e.target.value)} className={['w-20 rounded-md border bg-background px-2 py-1 text-center text-sm', r.present !== null && r.present > r.schoolOpened ? 'border-red-500' : r.needsCheck ? 'border-amber-500' : 'border-border'].join(' ')} />
+                        {r.needsCheck && <p className="mt-1 text-[10px] font-medium text-amber-700">Doesn&apos;t add up — enter days present</p>}
+                      </td>
+                      <td className="px-2 py-2.5 text-center tabular-nums text-muted-foreground" title="Worked out: days opened − days present">{r.present === null || r.present > r.schoolOpened ? '—' : r.schoolOpened - r.present}</td>
+                      <td className="px-3 py-2.5 text-right"><button type="button" onClick={() => saveRow(r.student.id)} disabled={r.saving || savingAll} className={['rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50', r.dirty ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border border-border bg-background hover:bg-muted'].join(' ')}>{r.saving ? 'Saving…' : r.hasEntry && !r.dirty && !r.needsCheck ? 'Saved' : 'Save'}</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">After entering attendance, re-generate the class&apos;s report cards to fold these figures into each card.</p>
+          <p className="mt-3 text-xs text-muted-foreground">{/* att-sanity-app-v1 */}Days absent is worked out for you (days opened − days present). Report cards pick these figures up automatically the next time you Print class or Re-render a card.</p>
         </section>
       )}
     </Shell>
@@ -258,7 +293,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="mx-auto max-w-5xl px-6 py-12 sm:px-8 lg:py-16">
         <p className="mb-3 text-xs font-medium uppercase tracking-[0.18em] text-primary">Operations</p>
         <h1 className="font-display text-4xl font-medium leading-tight tracking-tight sm:text-5xl">Attendance</h1>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">Record termly attendance per student — days the school opened, days present, days absent.</p>
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">Record termly attendance per student — days the school opened and days present. Days absent is worked out for you.</p>
         {children}
       </div>
     </div>
