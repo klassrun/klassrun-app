@@ -56,6 +56,8 @@ export type ReportCardRecord = {
   pdfUrl: string | null
   lockedAt: string | null
   snapshot: Snapshot
+  sessionId?: string // rc-card-refresh-app-v1
+  classId?: string | null // rc-card-refresh-app-v1: from Enrollment, so the class can be refreshed
 }
 
 const TERM_LABEL: Record<string, string> = { FIRST: 'First Term', SECOND: 'Second Term', THIRD: 'Third Term' }
@@ -74,23 +76,59 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(card.pdfUrl)
   const [lockedAt, setLockedAt] = useState<string | null>(card.lockedAt)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [pdfStage, setPdfStage] = useState<'refreshing' | 'rendering' | null>(null) // rc-card-refresh-app-v1
   const [lockBusy, setLockBusy] = useState(false)
   const snap = card.snapshot
   const scoreCols = snap.grading?.components?.length ? snap.grading.components : LEGACY_SCORE_COLS // grading-config-app-v1
   const locked = !!lockedAt
 
+  // rc-card-refresh-app-v1: refresh this card's class first, so the PDF carries the latest
+  // scores, attendance, behaviour, comments and next-term date — unless the card is locked
+  // (a lock means "print exactly this"). The tab opens inside the click so pop-up
+  // blockers allow it, and shows the PDF once it is ready.
   async function renderPdf() {
+    const win = window.open('', '_blank')
+    if (win) {
+      win.document.title = 'Preparing report card…'
+      win.document.body.innerHTML = '<p style="font-family:system-ui,sans-serif;padding:48px 24px;color:#131b26">Preparing the report card… the PDF opens here in a moment.</p>'
+    }
     setPdfBusy(true)
+    if (!locked && card.classId && card.sessionId) {
+      setPdfStage('refreshing')
+      const g = await fetch('/api/report-cards/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classId: card.classId, sessionId: card.sessionId, term: card.term }),
+      })
+      if (!g.ok) {
+        const b = await g.json().catch(() => null)
+        win?.close()
+        setPdfBusy(false)
+        setPdfStage(null)
+        toast.error(b?.error?.message || 'Could not refresh the card from the latest data')
+        return
+      }
+    }
+    setPdfStage('rendering')
     const res = await fetch(`/api/report-cards/${card.id}/pdf`, { method: 'POST' })
     setPdfBusy(false)
+    setPdfStage(null)
     if (!res.ok) {
       const b = await res.json().catch(() => null)
+      win?.close()
       toast.error(b?.error?.message || 'Could not render PDF')
       return
     }
     const data = await res.json().catch(() => null)
     const url = data?.reportCard?.pdfUrl ?? null
-    if (url) { setPdfUrl(url); toast.success('PDF ready'); window.open(url, '_blank') }
+    if (url) {
+      setPdfUrl(url)
+      toast.success('PDF ready')
+      if (win) win.location.href = url
+      else window.open(url, '_blank')
+    } else {
+      win?.close()
+    }
     router.refresh()
   }
 
@@ -117,7 +155,7 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
           <div className="flex items-center gap-2">
             {pdfUrl && <a href={pdfUrl} target="_blank" rel="noreferrer" className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors">Open PDF</a>}
             <button type="button" onClick={renderPdf} disabled={pdfBusy} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50">
-              {pdfBusy ? 'Rendering…' : pdfUrl ? 'Re-render PDF' : 'Render PDF'}
+              {pdfBusy ? (pdfStage === 'refreshing' ? 'Refreshing…' : 'Rendering…') : pdfUrl ? 'Re-render PDF' : 'Render PDF'}
             </button>
             <button type="button" onClick={lockCard} disabled={lockBusy || locked} className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50">
               {locked ? 'Locked' : lockBusy ? 'Locking…' : 'Lock'}
@@ -224,7 +262,11 @@ export function ReportCardView({ card }: { card: ReportCardRecord }) {
         </section>
 
         <p className="mt-8 text-xs text-muted-foreground">
-          Generated {new Date(snap.generatedAt).toLocaleString('en-GB')}. The PDF renders this exact snapshot.
+          Generated {new Date(snap.generatedAt).toLocaleString('en-GB')}.{' '}
+          {locked
+            ? 'This card is locked — its PDF prints exactly what is shown here.'
+            : 'Render PDF refreshes this card with the latest scores, attendance, behaviour, comments and next-term date first.'}
+          {/* rc-card-refresh-app-v1 */}
         </p>
       </div>
     </div>
