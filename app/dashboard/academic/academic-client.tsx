@@ -41,6 +41,7 @@ export function AcademicClient({
   const [createOpen, setCreateOpen] = useState(false)
   const [editDatesFor, setEditDatesFor] = useState<AcademicSession | null>(null)
   const [advanceFor, setAdvanceFor] = useState<AcademicSession | null>(null)
+  const [revertFor, setRevertFor] = useState<AcademicSession | null>(null) // term-back-app-v1
 
   const sessions = initialSessions
   const current = sessions.find((s) => s.isCurrent) ?? null
@@ -80,6 +81,26 @@ export function AcademicClient({
     } finally {
       setBusyId(null)
       setAdvanceFor(null)
+    }
+  }
+
+  // term-back-app-v1: undo an accidental advance (after the warning pop-up)
+  async function handleRevertTerm(s: AcademicSession) {
+    setBusyId(s.id)
+    try {
+      const res = await fetch(`/api/sessions/${s.id}/revert-term`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data?.error?.message ?? 'Could not move the term back')
+      } else {
+        toast.success(`Moved back to ${TERM_LABEL[data.session.currentTerm as AcademicSession['currentTerm']]}`)
+        router.refresh()
+      }
+    } catch {
+      toast.error('Network error. Please try again.')
+    } finally {
+      setBusyId(null)
+      setRevertFor(null)
     }
   }
 
@@ -143,6 +164,17 @@ export function AcademicClient({
                   >
                     {current.currentTerm === 'THIRD' ? 'Term complete' : 'Advance term'}
                   </button>
+                  {/* term-back-app-v1: undo an accidental advance — hidden at First Term */}
+                  {current.currentTerm !== 'FIRST' && (
+                    <button
+                      type="button"
+                      onClick={() => setRevertFor(current)}
+                      disabled={busyId === current.id}
+                      className="rounded-lg border border-amber-300 bg-background px-4 py-2 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Move back to {current.currentTerm === 'THIRD' ? 'Second' : 'First'} Term
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setEditDatesFor(current)}
@@ -247,6 +279,14 @@ export function AcademicClient({
         onOpenChange={(open) => { if (!open && !busyId) setAdvanceFor(null) }}
         onConfirm={advanceFor ? () => handleAdvanceTerm(advanceFor) : () => {}}
         busy={advanceFor ? busyId === advanceFor.id : false}
+      />
+
+      {/* term-back-app-v1 */}
+      <RevertConfirmDialog
+        session={revertFor}
+        onOpenChange={(open) => { if (!open && !busyId) setRevertFor(null) }}
+        onConfirm={revertFor ? () => handleRevertTerm(revertFor) : () => {}}
+        busy={revertFor ? busyId === revertFor.id : false}
       />
     </div>
   )
@@ -552,6 +592,66 @@ function EditDatesDialog({
   )
 }
 
+// term-back-app-v1: the WARNING pop-up shown before moving the term back.
+function RevertConfirmDialog({
+  session, onOpenChange, onConfirm, busy,
+}: {
+  session: AcademicSession | null
+  onOpenChange: (open: boolean) => void
+  onConfirm: () => void
+  busy: boolean
+}) {
+  if (!session) {
+    return (
+      <Dialog open={false} onOpenChange={onOpenChange}>
+        <DialogContent />
+      </Dialog>
+    )
+  }
+  const from = session.currentTerm === 'THIRD' ? 'Third Term' : 'Second Term'
+  const to = session.currentTerm === 'THIRD' ? 'Second Term' : 'First Term'
+  return (
+    <Dialog open={true} onOpenChange={(o) => { if (!busy) onOpenChange(o) }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-700">
+            Warning
+          </p>
+          <DialogTitle className="font-display text-2xl font-medium tracking-tight">
+            Move back to <span className="font-display-wonky italic text-amber-700">{to}</span>?
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Only do this if {session.name} was moved to {from} by mistake.
+          </DialogDescription>
+        </DialogHeader>
+        <ul className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-4 text-sm leading-relaxed text-amber-900">
+          <li>Every teacher&apos;s dashboard will open on <strong>{to}</strong>, and every new lesson note will be stamped <strong>{to}</strong> — until you advance again.</li>
+          <li>Nothing is deleted. Scores, attendance and report cards already entered for {from} stay in {from}.</li>
+          <li>To correct last term&apos;s scores or attendance, you don&apos;t need this — just pick that term on the Results, Attendance or Report cards page.</li>
+        </ul>
+        <DialogFooter className="gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            disabled={busy}
+            className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? 'Moving back…' : `Yes, move back to ${to}`}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function AdvanceConfirmDialog({
   session, onOpenChange, onConfirm, busy,
 }: {
@@ -583,7 +683,7 @@ function AdvanceConfirmDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
             Every teacher&apos;s dashboard, every new lesson note, every report card will be stamped with{' '}
-            <strong className="text-foreground">{next}</strong> from this point on. This can&apos;t be reversed from the UI.
+            <strong className="text-foreground">{next}</strong> from this point on. If this is a mistake, you can move back from this page. {/* term-back-app-v1 */}
           </DialogDescription>
         </DialogHeader>
 
